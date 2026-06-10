@@ -172,8 +172,8 @@ def process_youtube_video(
         if isolate_vocals or isolate_instrumental or enhance_speech:
             progress_callback(50, f"Processing {len(raw_chunk_paths)} chunks in parallel (Cloud GPU)...", step="4/5")
             
-            # Using 5 workers to parallelize but avoid extreme rate limits
-            max_workers = min(5, len(raw_chunk_paths))
+            # Based on user request: 1 agent = 1 task. We will send ALL chunks to the API simultaneously!
+            max_workers = len(raw_chunk_paths)
             completed = 0
             
             with ThreadPoolExecutor(max_workers=max_workers) as executor:
