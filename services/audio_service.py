@@ -98,7 +98,8 @@ def process_youtube_video(
                         str(downloaded_audio_path),
                         "None",
                         "0",
-                        fn_index=2
+                        str(downloaded_audio_path),
+                        api_name="/denoise"
                     )
                     # result is tuple: (noisy_audio, noisy_spec, enhanced_audio, enhanced_spec)
                     enhanced_audio_path = result[2]
