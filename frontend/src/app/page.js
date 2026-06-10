@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import "./globals.css";
 
 export default function Home() {
-  const [url, setUrl] = useState("");
+  const [file, setFile] = useState(null);
   const [taskId, setTaskId] = useState(null);
   const [status, setStatus] = useState("idle"); // idle, processing, completed, error
   const [progress, setProgress] = useState(0);
@@ -18,27 +18,28 @@ export default function Home() {
   const [enhanceSpeech, setEnhanceSpeech] = useState(false);
 
   const handleStart = async () => {
-    if (!url) return;
+    if (!file) return;
     setStatus("processing");
     setProgress(0);
-    setMessage("Initializing...");
+    setMessage("Uploading file...");
     setStep("1/5");
     setStartTime(Date.now() / 1000);
-    setVideoTitle("");
+    setVideoTitle(file.name);
     setVideoLength(0);
     setElapsedTime(0);
     
     try {
       const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+      
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("isolate_vocals", isolateVocals);
+      formData.append("isolate_instrumental", isolateInstrumental);
+      formData.append("enhance_speech", enhanceSpeech);
+
       const res = await fetch(`${baseUrl}/api/process`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          url,
-          isolate_vocals: isolateVocals,
-          isolate_instrumental: isolateInstrumental,
-          enhance_speech: enhanceSpeech
-        }),
+        body: formData,
       });
       const data = await res.json();
       if (res.ok) {
@@ -132,11 +133,11 @@ export default function Home() {
         
         <div className="input-group">
           <input
-            type="text"
-            placeholder="Paste YouTube Link here (e.g., https://youtu.be/...)"
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
+            type="file"
+            accept="audio/*,video/*"
+            onChange={(e) => setFile(e.target.files[0])}
             disabled={status === "processing"}
+            style={{ width: "100%", padding: "12px", background: "#1f2937", border: "1px solid #374151", borderRadius: "8px", color: "#fff" }}
           />
           
           <div style={{ display: "flex", flexWrap: "wrap", gap: "20px", marginTop: "15px", marginBottom: "15px", fontSize: "14px", color: "#d1d5db" }}>
@@ -179,8 +180,8 @@ export default function Home() {
           </div>
 
           {status === "idle" || status === "error" ? (
-            <button onClick={handleStart} disabled={!url}>
-              Start Extraction
+            <button onClick={handleStart} disabled={!file}>
+              Upload & Start Extraction
             </button>
           ) : status === "processing" ? (
             <button disabled>

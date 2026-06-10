@@ -6,8 +6,6 @@ import sys
 import wave
 from typing import Callable
 
-import yt_dlp
-
 import time
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -61,8 +59,8 @@ def process_chunk(chunk_path: Path, dest_dir: Path, isolate_vocals: bool, isolat
             
     return generated_files
 
-def process_youtube_video(
-    url: str, 
+def process_audio_file(
+    file_path: str, 
     task_id: str, 
     progress_callback: Callable[..., None],
     isolate_vocals: bool = False,
@@ -70,7 +68,7 @@ def process_youtube_video(
     enhance_speech: bool = False
 ) -> str:
     """
-    1. Downloads audio from YouTube.
+    1. Converts uploaded file to WAV format.
     2. Isolates vocals using Demucs.
     3. Splits into 50-second chunks.
     4. Zips and returns the path.
@@ -79,62 +77,20 @@ def process_youtube_video(
     task_dir.mkdir(parents=True, exist_ok=True)
     
     try:
-        # Step 1: Extract Metadata
-        progress_callback(5, "Extracting video metadata...", step="1/5")
+        # Step 1: Convert audio to standard WAV format
+        progress_callback(10, "Converting audio to standard format...", step="1/4")
+        downloaded_audio_path = task_dir / "converted.wav"
         
-        ydl_opts_meta = {
-            'quiet': True,
-            'nocheckcertificate': True
-        }
-        with yt_dlp.YoutubeDL(ydl_opts_meta) as ydl:
-            info_dict = ydl.extract_info(url, download=False)
-            video_title = info_dict.get('title', 'Unknown Title')
-            video_length = info_dict.get('duration', 0)
-            
-        progress_callback(10, f"Found: {video_title} ({video_length}s)", video_title=video_title, video_length=video_length)
+        try:
+            subprocess.run([
+                "ffmpeg", "-y", "-i", str(file_path),
+                "-ar", "44100", "-ac", "2", str(downloaded_audio_path)
+            ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except subprocess.CalledProcessError as e:
+            raise RuntimeError(f"FFmpeg failed to convert the file. Is it a valid audio/video file? {e}")
 
-        # Step 2: Download audio
-        progress_callback(15, "Downloading audio from YouTube...", step="2/5")
-        downloaded_audio_path = task_dir / "downloaded.wav"
-        
-        ydl_opts = {
-            'format': 'bestaudio/best',
-            'outtmpl': str(task_dir / 'downloaded.%(ext)s'),
-            'postprocessors': [{
-                'key': 'FFmpegExtractAudio',
-                'preferredcodec': 'wav',
-                'preferredquality': '192',
-            }],
-            'quiet': True,
-            'nocheckcertificate': True
-        }
-            
-        success = False
-        last_error = None
-        max_retries = 3
-        
-        # Robust retry mechanism with exponential backoff
-        for attempt in range(max_retries):
-            try:
-                if attempt > 0:
-                    progress_callback(10 + attempt, f"Retrying download (Attempt {attempt + 1}/{max_retries})...")
-                    time.sleep(2 ** attempt) # Exponential backoff: 2s, 4s, etc.
-                    
-                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                    ydl.download([url])
-                success = True
-                break
-            except Exception as e:
-                last_error = e
-                continue
-                
-        if not success:
-            raise RuntimeError(f"YouTube blocked the download after {max_retries} attempts. Error: {last_error}")
-            
-        target_audio_paths = []
-
-        # Step 3: Split into 50-second chunks FIRST
-        progress_callback(30, "Splitting tracks into 50-second segments...", step="3/5")
+        # Step 2: Split into 50-second chunks FIRST
+        progress_callback(30, "Splitting tracks into 50-second segments...", step="2/4")
         
         chunk_length_ms = 50 * 1000 # 50 seconds in ms
         raw_chunks_dir = task_dir / "raw_chunks"
@@ -170,7 +126,7 @@ def process_youtube_video(
         processed_chunks_dir.mkdir(exist_ok=True)
         
         if isolate_vocals or isolate_instrumental or enhance_speech:
-            progress_callback(50, f"Processing {len(raw_chunk_paths)} chunks in parallel (Cloud GPU)...", step="4/5")
+            progress_callback(50, f"Processing {len(raw_chunk_paths)} chunks in parallel (Cloud GPU)...", step="3/4")
             
             # Limit to 5 concurrent workers to respect API rate limits from a single IP address
             max_workers = min(5, len(raw_chunk_paths))
@@ -188,20 +144,18 @@ def process_youtube_video(
                         generated = future.result()
                         completed += 1
                         progress_callback(50 + int((completed / len(raw_chunk_paths)) * 40), 
-                                       f"Processed {completed}/{len(raw_chunk_paths)} chunks...", step="4/5")
+                                       f"Processed {completed}/{len(raw_chunk_paths)} chunks...", step="3/4")
                     except Exception as exc:
                         raise RuntimeError(f"Chunk {idx} generated an exception: {exc}")
                         
             final_dir_to_zip = processed_chunks_dir
         else:
             # Skip AI step entirely
-            progress_callback(80, "Skipping AI separation (Instant Splitter Mode)...", step="4/5")
+            progress_callback(80, "Skipping AI separation (Instant Splitter Mode)...", step="3/4")
             final_dir_to_zip = raw_chunks_dir
 
-        # Step 4: Split into 50-second chunks
-
-        # Step 5: Zip the chunks
-        progress_callback(95, "Zipping segments...", step="5/5")
+        # Step 4: Zip the chunks
+        progress_callback(95, "Zipping segments...", step="4/4")
         zip_path = WORK_DIR / f"vocals_{task_id}.zip"
         
         with zipfile.ZipFile(str(zip_path), 'w', zipfile.ZIP_DEFLATED) as zipf:

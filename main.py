@@ -4,10 +4,9 @@ import sys
 if sys.platform == 'win32':
     sys.stdout.reconfigure(encoding='utf-8')
 
-from fastapi import FastAPI, BackgroundTasks, HTTPException, Request
+from fastapi import FastAPI, BackgroundTasks, HTTPException, Request, UploadFile, File, Form
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
 import uuid
 import shutil
 import time
@@ -28,41 +27,51 @@ app.add_middleware(
 # In-memory status tracker (for a production app, use Redis/DB)
 tasks_status = {}
 
-class YouTubeRequest(BaseModel):
-    url: str
-    isolate_vocals: bool = False
-    isolate_instrumental: bool = False
-    enhance_speech: bool = False
-
 @app.post("/api/process")
-async def start_processing(request: YouTubeRequest, background_tasks: BackgroundTasks):
-    if not request.url:
-        raise HTTPException(status_code=400, detail="YouTube URL is required")
+async def start_processing(
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    isolate_vocals: str = Form("false"),
+    isolate_instrumental: str = Form("false"),
+    enhance_speech: str = Form("false")
+):
+    if not file:
+        raise HTTPException(status_code=400, detail="File is required")
         
     task_id = str(uuid.uuid4())
+    
+    os.makedirs("downloads", exist_ok=True)
+    file_path = os.path.join("downloads", f"{task_id}_{file.filename}")
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+        
     tasks_status[task_id] = {
         "status": "pending",
         "progress": 0,
-        "message": "Initializing...",
+        "message": "File received. Initializing...",
         "result_path": None,
-        "step": "1/5",
+        "step": "1/4",
         "start_time": time.time(),
-        "video_title": "",
+        "video_title": file.filename,
         "video_length": 0
     }
+    
+    isolate_vocals_bool = isolate_vocals.lower() == "true"
+    isolate_instrumental_bool = isolate_instrumental.lower() == "true"
+    enhance_speech_bool = enhance_speech.lower() == "true"
     
     background_tasks.add_task(
         run_audio_processing, 
         task_id, 
-        request.url, 
-        request.isolate_vocals, 
-        request.isolate_instrumental,
-        request.enhance_speech
+        file_path, 
+        isolate_vocals_bool, 
+        isolate_instrumental_bool,
+        enhance_speech_bool
     )
     
     return {"task_id": task_id}
 
-def run_audio_processing(task_id: str, url: str, isolate_vocals: bool, isolate_instrumental: bool, enhance_speech: bool):
+def run_audio_processing(task_id: str, file_path: str, isolate_vocals: bool, isolate_instrumental: bool, enhance_speech: bool):
     try:
         def progress_callback(progress_percent, message, **kwargs):
             tasks_status[task_id]["progress"] = progress_percent
@@ -71,7 +80,7 @@ def run_audio_processing(task_id: str, url: str, isolate_vocals: bool, isolate_i
                 tasks_status[task_id][key] = value
             
         zip_path = process_youtube_video(
-            url, 
+            file_path, 
             task_id, 
             progress_callback,
             isolate_vocals=isolate_vocals,
