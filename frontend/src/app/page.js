@@ -29,7 +29,8 @@ export default function Home() {
     setElapsedTime(0);
     
     try {
-      const res = await fetch(process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000/api/process", {
+      const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+      const res = await fetch(`${baseUrl}/api/process`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
