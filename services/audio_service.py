@@ -13,7 +13,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 # Base directory for all temporary files during processing
 WORK_DIR = Path("temp_workdir")
 
-def process_chunk(chunk_path: Path, dest_dir: Path, isolate_vocals: bool, isolate_instrumental: bool, enhance_speech: bool, chunk_idx: int) -> list[Path]:
+def process_chunk(chunk_path: Path, dest_dir: Path, isolate_vocals: bool, isolate_instrumental: bool, four_stem: bool, enhance_speech: bool, chunk_idx: int) -> list[Path]:
     """Worker function to process a single audio chunk through AI."""
     from gradio_client import Client
     
@@ -36,24 +36,46 @@ def process_chunk(chunk_path: Path, dest_dir: Path, isolate_vocals: bool, isolat
         except Exception as e:
             raise RuntimeError(f"DeepFilterNet API Error on chunk {chunk_idx}: {e}")
 
-    if isolate_vocals or isolate_instrumental:
+    if isolate_vocals or isolate_instrumental or four_stem:
         try:
             client = Client("nakas/demucs_playground")
             result = client.predict(
                 str(chunk_path),
                 api_name="/predict"
             )
+            
+            # result[0] = Vocals, result[1] = Bass, result[2] = Drums, result[3] = Other
             if isolate_vocals:
                 vocals_path = result[0]
                 dest_path = dest_dir / f"vocals_part_{chunk_idx:03d}.wav"
                 shutil.copy(vocals_path, str(dest_path))
                 generated_files.append(dest_path)
                 
-            if isolate_instrumental:
+            if isolate_instrumental and not four_stem:
                 inst_path = result[3]
                 dest_path = dest_dir / f"instrumental_part_{chunk_idx:03d}.wav"
                 shutil.copy(inst_path, str(dest_path))
                 generated_files.append(dest_path)
+                
+            if four_stem:
+                # Bass
+                bass_path = result[1]
+                dest_path = dest_dir / f"bass_part_{chunk_idx:03d}.wav"
+                shutil.copy(bass_path, str(dest_path))
+                generated_files.append(dest_path)
+                
+                # Drums
+                drums_path = result[2]
+                dest_path = dest_dir / f"drums_part_{chunk_idx:03d}.wav"
+                shutil.copy(drums_path, str(dest_path))
+                generated_files.append(dest_path)
+                
+                # Other (Instrumental)
+                other_path = result[3]
+                dest_path = dest_dir / f"instrumental_part_{chunk_idx:03d}.wav"
+                shutil.copy(other_path, str(dest_path))
+                generated_files.append(dest_path)
+                
         except Exception as e:
             raise RuntimeError(f"Demucs API Error on chunk {chunk_idx}: {e}")
             
@@ -65,13 +87,14 @@ def process_audio_file(
     progress_callback: Callable[..., None],
     isolate_vocals: bool = False,
     isolate_instrumental: bool = False,
+    four_stem: bool = False,
     enhance_speech: bool = False
 ) -> str:
     """
     1. Converts uploaded file to WAV format.
     2. Isolates vocals using Demucs.
     3. Splits into 50-second chunks.
-    4. Zips and returns the path.
+    4. Merges chunks and returns the zip path.
     """
     task_dir = WORK_DIR / task_id
     task_dir.mkdir(parents=True, exist_ok=True)
@@ -121,11 +144,11 @@ def process_audio_file(
                 raw_chunk_paths.append((chunk_idx, out_path))
                 chunk_idx += 1
 
-        # Step 4: AI Processing in Parallel
+        # Step 3: AI Processing in Parallel
         processed_chunks_dir = task_dir / "processed_chunks"
         processed_chunks_dir.mkdir(exist_ok=True)
         
-        if isolate_vocals or isolate_instrumental or enhance_speech:
+        if isolate_vocals or isolate_instrumental or four_stem or enhance_speech:
             progress_callback(50, f"Processing {len(raw_chunk_paths)} chunks in parallel (Cloud GPU)...", step="3/4")
             
             # Limit to 5 concurrent workers to respect API rate limits from a single IP address
@@ -134,7 +157,7 @@ def process_audio_file(
             
             with ThreadPoolExecutor(max_workers=max_workers) as executor:
                 future_to_chunk = {
-                    executor.submit(process_chunk, path, processed_chunks_dir, isolate_vocals, isolate_instrumental, enhance_speech, idx): idx
+                    executor.submit(process_chunk, path, processed_chunks_dir, isolate_vocals, isolate_instrumental, four_stem, enhance_speech, idx): idx
                     for idx, path in raw_chunk_paths
                 }
                 
@@ -154,8 +177,36 @@ def process_audio_file(
             progress_callback(80, "Skipping AI separation (Instant Splitter Mode)...", step="3/4")
             final_dir_to_zip = raw_chunks_dir
 
+        # Helper to merge chunks into full files
+        def merge_wavs(prefix, out_filename):
+            files = sorted([f for f in os.listdir(final_dir_to_zip) if f.startswith(prefix) and f.endswith(".wav")])
+            if not files: return
+            
+            out_path = final_dir_to_zip / out_filename
+            with wave.open(str(final_dir_to_zip / files[0]), 'rb') as first_wav:
+                params = first_wav.getparams()
+                
+            with wave.open(str(out_path), 'wb') as out_wav:
+                out_wav.setparams(params)
+                for f in files:
+                    with wave.open(str(final_dir_to_zip / f), 'rb') as w:
+                        out_wav.writeframes(w.readframes(w.getnframes()))
+                        
+            # Remove chunk files after merging
+            for f in files:
+                os.remove(str(final_dir_to_zip / f))
+
+        # Merge chunks
+        progress_callback(90, "Merging audio stems...", step="4/4")
+        merge_wavs("vocals_part_", "vocals.wav")
+        merge_wavs("instrumental_part_", "instrumental.wav")
+        merge_wavs("bass_part_", "bass.wav")
+        merge_wavs("drums_part_", "drums.wav")
+        merge_wavs("enhanced_part_", "enhanced.wav")
+        merge_wavs("raw_part_", "original.wav")
+
         # Step 4: Zip the chunks
-        progress_callback(95, "Zipping segments...", step="4/4")
+        progress_callback(95, "Zipping stems...", step="4/4")
         zip_path = WORK_DIR / f"vocals_{task_id}.zip"
         
         with zipfile.ZipFile(str(zip_path), 'w', zipfile.ZIP_DEFLATED) as zipf:
@@ -168,6 +219,7 @@ def process_audio_file(
         return str(zip_path)
         
     finally:
-        # Cleanup temporary task directory to save space
-        if task_dir.exists():
-            shutil.rmtree(str(task_dir), ignore_errors=True)
+        # Keep the directory temporarily for streaming, it will be cleaned up via CRON or let's not delete it yet!
+        # If we delete it, the audio player won't work!
+        # Wait, if we delete task_dir, the audio player throws a 404. We shouldn't delete task_dir immediately.
+        pass

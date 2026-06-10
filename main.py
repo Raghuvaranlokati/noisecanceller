@@ -11,7 +11,7 @@ import uuid
 import shutil
 import time
 
-from services.audio_service import process_youtube_video
+from services.audio_service import process_audio_file
 
 app = FastAPI()
 
@@ -33,6 +33,7 @@ async def start_processing(
     file: UploadFile = File(...),
     isolate_vocals: str = Form("false"),
     isolate_instrumental: str = Form("false"),
+    four_stem: str = Form("false"),
     enhance_speech: str = Form("false")
 ):
     if not file:
@@ -58,6 +59,7 @@ async def start_processing(
     
     isolate_vocals_bool = isolate_vocals.lower() == "true"
     isolate_instrumental_bool = isolate_instrumental.lower() == "true"
+    four_stem_bool = four_stem.lower() == "true"
     enhance_speech_bool = enhance_speech.lower() == "true"
     
     background_tasks.add_task(
@@ -66,12 +68,13 @@ async def start_processing(
         file_path, 
         isolate_vocals_bool, 
         isolate_instrumental_bool,
+        four_stem_bool,
         enhance_speech_bool
     )
     
     return {"task_id": task_id}
 
-def run_audio_processing(task_id: str, file_path: str, isolate_vocals: bool, isolate_instrumental: bool, enhance_speech: bool):
+def run_audio_processing(task_id: str, file_path: str, isolate_vocals: bool, isolate_instrumental: bool, four_stem: bool, enhance_speech: bool):
     try:
         def progress_callback(progress_percent, message, **kwargs):
             tasks_status[task_id]["progress"] = progress_percent
@@ -79,12 +82,13 @@ def run_audio_processing(task_id: str, file_path: str, isolate_vocals: bool, iso
             for key, value in kwargs.items():
                 tasks_status[task_id][key] = value
             
-        zip_path = process_youtube_video(
+        zip_path = process_audio_file(
             file_path, 
             task_id, 
             progress_callback,
             isolate_vocals=isolate_vocals,
             isolate_instrumental=isolate_instrumental,
+            four_stem=four_stem,
             enhance_speech=enhance_speech
         )
         
@@ -117,6 +121,27 @@ async def download_result(task_id: str):
         media_type="application/zip",
         filename=f"vocals_{task_id}.zip"
     )
+
+@app.get("/api/stream/{task_id}/{filename}")
+async def stream_audio(task_id: str, filename: str):
+    if task_id not in tasks_status:
+        raise HTTPException(status_code=404, detail="Task not found")
+        
+    task = tasks_status[task_id]
+    if task["status"] != "completed" or not task["result_path"]:
+        raise HTTPException(status_code=400, detail="Task not completed yet")
+        
+    # The audio files are inside temp_workdir/{task_id}/processed_chunks
+    # Since we are returning the final joined files or chunks, wait, we need to make sure audio_service returns joined files!
+    # Let's serve it directly from the task dir
+    file_path = os.path.join("temp_workdir", task_id, "processed_chunks", filename)
+    if not os.path.exists(file_path):
+        # Fallback to checking raw chunks if no AI was applied
+        file_path = os.path.join("temp_workdir", task_id, "raw_chunks", filename)
+        if not os.path.exists(file_path):
+            raise HTTPException(status_code=404, detail="File not found")
+            
+    return FileResponse(file_path, media_type="audio/wav")
 
 if __name__ == "__main__":
     import uvicorn

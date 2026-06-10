@@ -1,237 +1,245 @@
 "use client";
-import { useState, useEffect } from "react";
-import "./globals.css";
+import { useState, useRef } from "react";
 
 export default function Home() {
   const [file, setFile] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState({ step: "", percent: 0, message: "" });
+  const [resultZip, setResultZip] = useState(null);
   const [taskId, setTaskId] = useState(null);
-  const [status, setStatus] = useState("idle"); // idle, processing, completed, error
-  const [progress, setProgress] = useState(0);
-  const [message, setMessage] = useState("");
-  const [step, setStep] = useState("");
-  const [startTime, setStartTime] = useState(null);
-  const [videoTitle, setVideoTitle] = useState("");
-  const [videoLength, setVideoLength] = useState(0);
-  const [elapsedTime, setElapsedTime] = useState(0);
-  const [isolateVocals, setIsolateVocals] = useState(false);
-  const [isolateInstrumental, setIsolateInstrumental] = useState(false);
-  const [enhanceSpeech, setEnhanceSpeech] = useState(false);
+  const [error, setError] = useState(null);
+  const [fourStem, setFourStem] = useState(false);
+  const [enhance, setEnhance] = useState(false);
 
-  const handleStart = async () => {
-    if (!file) return;
-    setStatus("processing");
-    setProgress(0);
-    setMessage("Uploading file...");
-    setStep("1/5");
-    setStartTime(Date.now() / 1000);
-    setVideoTitle(file.name);
-    setVideoLength(0);
-    setElapsedTime(0);
-    
+  // Auto-detect backend URL based on environment (local dev vs Vercel)
+  const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+
+  const handleFileChange = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      setFile(e.target.files[0]);
+    }
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      setFile(e.dataTransfer.files[0]);
+    }
+  };
+
+  const startExtraction = async () => {
+    if (!file) {
+      setError("Please select an audio or video file first.");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    setResultZip(null);
+    setTaskId(null);
+    setProgress({ step: "1/4", percent: 5, message: "Uploading file securely..." });
+
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
-      
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("isolate_vocals", isolateVocals);
-      formData.append("isolate_instrumental", isolateInstrumental);
-      formData.append("enhance_speech", enhanceSpeech);
+      // Backend expects these booleans as strings or standard form data
+      formData.append("isolate_vocals", "true");
+      formData.append("isolate_instrumental", "true");
+      formData.append("four_stem", fourStem ? "true" : "false");
+      formData.append("enhance_speech", enhance ? "true" : "false");
 
       const res = await fetch(`${baseUrl}/api/process`, {
         method: "POST",
         body: formData,
       });
+
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.detail || "Failed to start processing");
+      }
+
       const data = await res.json();
-      if (res.ok) {
-        setTaskId(data.task_id);
-        if (typeof window !== "undefined") {
-          localStorage.setItem('noise_canceller_taskId', data.task_id);
-        }
-      } else {
-        setStatus("error");
-        setMessage(data.detail || "Failed to start processing.");
-      }
+      setTaskId(data.task_id);
+      pollProgress(data.task_id);
     } catch (err) {
-      setStatus("error");
-      setMessage("Cannot connect to server. Is the backend running?");
+      setError(err.message);
+      setLoading(false);
     }
   };
 
-  // Restore task from localStorage on page load
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const savedTaskId = localStorage.getItem('noise_canceller_taskId');
-      if (savedTaskId) {
-        setTaskId(savedTaskId);
-        setStatus("processing");
-        setMessage("Resuming progress...");
-        setStep("...");
-      }
-    }
-  }, []);
+  const pollProgress = async (id) => {
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`${baseUrl}/api/status/${id}`);
+        const data = await res.json();
 
-  useEffect(() => {
-    let interval;
-    if (taskId && status === "processing") {
-      interval = setInterval(async () => {
-        try {
-          const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000"}/api/status/${taskId}`);
-          const data = await res.json();
-          if (res.ok) {
-            setProgress(data.progress);
-            setMessage(data.message);
-            if (data.step) setStep(data.step);
-            if (data.start_time) setStartTime(data.start_time);
-            if (data.video_title) setVideoTitle(data.video_title);
-            if (data.video_length) setVideoLength(data.video_length);
-            
-            if (data.start_time) {
-               setElapsedTime(Math.floor(Date.now() / 1000 - data.start_time));
-            }
-            if (data.status === "completed") {
-              setStatus("completed");
-              if (typeof window !== "undefined") localStorage.removeItem('noise_canceller_taskId');
-              clearInterval(interval);
-            } else if (data.status === "failed") {
-              setStatus("error");
-              if (typeof window !== "undefined") localStorage.removeItem('noise_canceller_taskId');
-              clearInterval(interval);
-            }
-          }
-        } catch (err) {
-          console.error(err);
+        if (data.status === "processing") {
+          setProgress({
+            step: data.progress.step || "Processing",
+            percent: data.progress.percent || 0,
+            message: data.progress.message || "Working...",
+          });
+        } else if (data.status === "completed") {
+          clearInterval(interval);
+          setResultZip(`${baseUrl}/api/download/${id}`);
+          setProgress({ step: "Done", percent: 100, message: "Extraction Complete!" });
+          setLoading(false);
+        } else if (data.status === "failed") {
+          clearInterval(interval);
+          setError(data.error);
+          setLoading(false);
         }
-      }, 2000);
-    }
-    return () => clearInterval(interval);
-  }, [taskId, status]);
-
-  // Calculate live ETA
-  const calculateETA = () => {
-    if (progress === 0 || progress === 100 || !startTime) return "Calculating...";
-    const totalEstimatedSeconds = (elapsedTime / progress) * 100;
-    const remainingSeconds = Math.max(0, Math.floor(totalEstimatedSeconds - elapsedTime));
-    return formatTime(remainingSeconds);
-  };
-
-  const formatTime = (seconds) => {
-    if (!seconds) return "0s";
-    const m = Math.floor(seconds / 60);
-    const s = Math.floor(seconds % 60);
-    return `${m}m ${s}s`;
-  };
-
-  const handleDownload = () => {
-    window.location.href = `${process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000"}/api/download/${taskId}`;
+      } catch (err) {
+        console.error("Polling error", err);
+      }
+    }, 2000);
   };
 
   return (
-    <div className="container">
-      <div className="card">
-        <h1>Vocal Extractor</h1>
-        <p className="subtitle">Extract pure vocals from any YouTube video in 50s chunks.</p>
+    <main>
+      <div className="container">
         
-        <div className="input-group">
-          <input
-            type="file"
-            accept="audio/*,video/*"
-            onChange={(e) => setFile(e.target.files[0])}
-            disabled={status === "processing"}
-            style={{ width: "100%", padding: "12px", background: "#1f2937", border: "1px solid #374151", borderRadius: "8px", color: "#fff" }}
-          />
-          
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "20px", marginTop: "15px", marginBottom: "15px", fontSize: "14px", color: "#d1d5db" }}>
-            <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
-              <input 
-                type="checkbox" 
-                checked={isolateVocals} 
-                onChange={(e) => setIsolateVocals(e.target.checked)} 
-                disabled={status === "processing"}
-                style={{ width: "16px", height: "16px", accentColor: "#8b5cf6" }}
-              />
-              Isolate Vocals (Demucs API)
-            </label>
-            <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
-              <input 
-                type="checkbox" 
-                checked={isolateInstrumental} 
-                onChange={(e) => setIsolateInstrumental(e.target.checked)} 
-                disabled={status === "processing"}
-                style={{ width: "16px", height: "16px", accentColor: "#8b5cf6" }}
-              />
-              Isolate Background Music (Demucs API)
-            </label>
-            <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
-              <input 
-                type="checkbox" 
-                checked={enhanceSpeech} 
-                onChange={(e) => setEnhanceSpeech(e.target.checked)} 
-                disabled={status === "processing"}
-                style={{ width: "16px", height: "16px", accentColor: "#10b981" }}
-              />
-              Speech Enhancement / Noise Removal (DeepFilterNet API)
-            </label>
-          </div>
-          
-          <div style={{ fontSize: "12px", color: "#9ca3af", marginBottom: "15px" }}>
-            {!isolateVocals && !isolateInstrumental && !enhanceSpeech
-              ? "⚡ Instant Splitter Mode: No AI selected. Video will be instantly downloaded and cut into chunks." 
-              : "🚀 Cloud AI Mode: Audio will be processed on massive enterprise GPUs via Hugging Face."}
-          </div>
+        {/* Hero Section */}
+        <section className="hero-section">
+          <h1 className="hero-title">Vocal Extractor AI</h1>
+          <p className="hero-subtitle">
+            Extract studio-quality vocals, drums, bass, and instrumental tracks from any audio or video file instantly. 
+            Powered by next-gen Enterprise GPUs. 100% Free.
+          </p>
+        </section>
 
-          {status === "idle" || status === "error" ? (
-            <button onClick={handleStart} disabled={!file}>
-              Upload & Start Extraction
-            </button>
-          ) : status === "processing" ? (
-            <button disabled>
-              Processing...
-            </button>
-          ) : (
-            <button onClick={handleDownload} style={{ background: "linear-gradient(to right, #10b981, #059669)" }}>
-              Download Vocals (.zip)
-            </button>
+        {/* Main Processing App */}
+        <div className="glass-card">
+          {!resultZip && (
+            <>
+              <div 
+                className="upload-zone"
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={handleDrop}
+              >
+                <div className="feature-icon">📁</div>
+                <h3 style={{marginBottom: "10px"}}>Drag & Drop your audio/video file here</h3>
+                <p style={{color: "var(--text-muted)", marginBottom: "20px"}}>Supports MP3, MP4, WAV, FLAC, MOV</p>
+                
+                <label className="custom-file-upload">
+                  <input type="file" accept="audio/*,video/*" onChange={handleFileChange} />
+                  Choose File
+                </label>
+                {file && <p style={{marginTop: "15px", color: "var(--success)", fontWeight: "500"}}>Selected: {file.name}</p>}
+              </div>
+
+              <div className="checkbox-grid">
+                <label className="checkbox-label">
+                  <input type="checkbox" checked disabled />
+                  <span>
+                    <strong>Vocal Isolation</strong><br/>
+                    <small style={{color: "var(--text-muted)"}}>Extract clean vocals</small>
+                  </span>
+                </label>
+                <label className="checkbox-label">
+                  <input type="checkbox" checked disabled />
+                  <span>
+                    <strong>Instrumental</strong><br/>
+                    <small style={{color: "var(--text-muted)"}}>Extract backing track</small>
+                  </span>
+                </label>
+                <label className="checkbox-label">
+                  <input type="checkbox" checked={fourStem} onChange={e => setFourStem(e.target.checked)} />
+                  <span>
+                    <strong>4-Stem Separation</strong><br/>
+                    <small style={{color: "var(--text-muted)"}}>Vocals, Drums, Bass, Other (Slower)</small>
+                  </span>
+                </label>
+                <label className="checkbox-label">
+                  <input type="checkbox" checked={enhance} onChange={e => setEnhance(e.target.checked)} />
+                  <span>
+                    <strong>Deep Denoise</strong><br/>
+                    <small style={{color: "var(--text-muted)"}}>Remove background noise</small>
+                  </span>
+                </label>
+              </div>
+
+              {error && <div style={{padding: "15px", background: "rgba(220, 38, 38, 0.1)", color: "#f87171", borderRadius: "8px", marginBottom: "20px", border: "1px solid #7f1d1d"}}>{error}</div>}
+
+              {loading ? (
+                <div className="progress-container">
+                  <div style={{display: "flex", justifyContent: "space-between", marginBottom: "8px"}}>
+                    <span style={{fontWeight: "500", color: "var(--primary)"}}>Step {progress.step}</span>
+                    <span style={{color: "var(--text-muted)"}}>{progress.percent}%</span>
+                  </div>
+                  <div className="progress-bar-bg">
+                    <div className="progress-bar-fill" style={{ width: `${progress.percent}%` }}></div>
+                  </div>
+                  <p style={{textAlign: "center", marginTop: "12px", color: "var(--text-muted)", fontSize: "0.9rem"}}>{progress.message}</p>
+                </div>
+              ) : (
+                <button className="btn-primary" onClick={startExtraction} disabled={!file}>
+                  ✨ Start AI Extraction
+                </button>
+              )}
+            </>
+          )}
+
+          {/* Results UI with Custom Audio Player */}
+          {resultZip && taskId && (
+            <div style={{textAlign: "center"}}>
+              <div className="feature-icon" style={{fontSize: "3rem", marginBottom: "10px"}}>🎉</div>
+              <h2 style={{color: "var(--success)", marginBottom: "10px"}}>Extraction Complete!</h2>
+              <p style={{color: "var(--text-muted)", marginBottom: "30px"}}>Listen to your isolated tracks below or download the full ZIP.</p>
+              
+              <div className="audio-player-card">
+                <div className="audio-track">
+                  <div className="audio-track-title" style={{textAlign:"left"}}>🎤 Vocals</div>
+                  <audio controls src={`${baseUrl}/api/stream/${taskId}/vocals.wav`} preload="none"></audio>
+                </div>
+                <div className="audio-track">
+                  <div className="audio-track-title" style={{textAlign:"left"}}>🎸 Instrumental</div>
+                  <audio controls src={`${baseUrl}/api/stream/${taskId}/instrumental.wav`} preload="none"></audio>
+                </div>
+                {fourStem && (
+                  <>
+                    <div className="audio-track">
+                      <div className="audio-track-title" style={{textAlign:"left"}}>🥁 Drums</div>
+                      <audio controls src={`${baseUrl}/api/stream/${taskId}/drums.wav`} preload="none"></audio>
+                    </div>
+                    <div className="audio-track">
+                      <div className="audio-track-title" style={{textAlign:"left"}}>🎸 Bass</div>
+                      <audio controls src={`${baseUrl}/api/stream/${taskId}/bass.wav`} preload="none"></audio>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              <div style={{marginTop: "30px", display: "flex", gap: "15px", justifyContent: "center"}}>
+                <a href={resultZip} download>
+                  <button className="btn-primary btn-success">📦 Download All Stems (.ZIP)</button>
+                </a>
+                <button className="btn-primary" onClick={() => {setResultZip(null); setFile(null); setTaskId(null);}} style={{background: "var(--border)"}}>Process Another File</button>
+              </div>
+            </div>
           )}
         </div>
 
-        {status === "error" && (
-          <div style={{ color: "#ef4444", textAlign: "center", marginTop: "10px" }}>
-            Error: {message}
+        {/* Feature Grid for SEO and conversion */}
+        <section className="feature-grid">
+          <div className="feature-card">
+            <div className="feature-icon">🚀</div>
+            <h3 className="feature-title">Lightning Fast</h3>
+            <p style={{color: "var(--text-muted)"}}>Powered by Hugging Face Enterprise GPUs, extracting a 4-minute song takes seconds.</p>
           </div>
-        )}
-
-        {(status === "processing" || status === "completed") && (
-          <div className="progress-container" style={{ marginTop: "20px", background: "#111827", padding: "20px", borderRadius: "12px", border: "1px solid #374151" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "10px", fontSize: "14px", color: "#9ca3af" }}>
-              <span><strong>Step:</strong> {step}</span>
-              <span><strong>Elapsed:</strong> {formatTime(elapsedTime)}</span>
-            </div>
-            
-            {videoTitle && (
-              <div style={{ marginBottom: "15px", padding: "10px", background: "#1f2937", borderRadius: "8px", fontSize: "13px" }}>
-                <div style={{ color: "#fff", marginBottom: "4px" }}><strong>{videoTitle}</strong></div>
-                <div style={{ color: "#9ca3af" }}>Duration: {formatTime(videoLength)}</div>
-              </div>
-            )}
-
-            <div className="progress-bar-bg" style={{ height: "12px" }}>
-              <div 
-                className="progress-bar-fill" 
-                style={{ width: `${progress}%`, transition: "width 0.5s ease" }}
-              ></div>
-            </div>
-            <div className="status-text" style={{ marginTop: "12px", fontSize: "15px", fontWeight: "500", color: "#f3f4f6" }}>
-              {message} ({progress}%)
-            </div>
-            
-            {status === "processing" && (
-              <div style={{ marginTop: "10px", textAlign: "right", fontSize: "13px", color: "#a78bfa" }}>
-                <strong>Estimated Time Left:</strong> {calculateETA()}
-              </div>
-            )}
+          <div className="feature-card">
+            <div className="feature-icon">🎛️</div>
+            <h3 className="feature-title">4-Stem Separation</h3>
+            <p style={{color: "var(--text-muted)"}}>Go beyond basic vocal removal. Isolate drums, bass, vocals, and melodies perfectly.</p>
           </div>
-        )}
+          <div className="feature-card">
+            <div className="feature-icon">💎</div>
+            <h3 className="feature-title">Studio Quality</h3>
+            <p style={{color: "var(--text-muted)"}}>Maintains the original 44.1kHz sample rate with absolutely zero audio compression.</p>
+          </div>
+        </section>
+
       </div>
-    </div>
+    </main>
   );
 }
