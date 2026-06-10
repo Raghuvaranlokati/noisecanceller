@@ -1,4 +1,9 @@
 import os
+import sys
+# Fix Windows console unicode errors when printing emojis (like gradio_client's checkmark)
+if sys.platform == 'win32':
+    sys.stdout.reconfigure(encoding='utf-8')
+
 from fastapi import FastAPI, BackgroundTasks, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware

@@ -53,7 +53,6 @@ def process_youtube_video(
         ydl_opts = {
             'format': 'bestaudio/best',
             'outtmpl': str(task_dir / 'downloaded.%(ext)s'),
-            'ffmpeg_location': '.',
             'postprocessors': [{
                 'key': 'FFmpegExtractAudio',
                 'preferredcodec': 'wav',
