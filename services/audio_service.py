@@ -87,7 +87,7 @@ def process_youtube_video(
         target_audio_paths = []
 
         if isolate_vocals or isolate_instrumental or enhance_speech:
-            from gradio_client import Client, handle_file
+            from gradio_client import Client, file
             
             # Use Hugging Face APIs instead of local processing
             if enhance_speech:
@@ -95,7 +95,7 @@ def process_youtube_video(
                 try:
                     client = Client("hshr/DeepFilterNet2")
                     result = client.predict(
-                        handle_file(str(downloaded_audio_path)),
+                        file(str(downloaded_audio_path)),
                         "None",
                         "0",
                         fn_index=2
@@ -115,7 +115,7 @@ def process_youtube_video(
                 try:
                     client = Client("nakas/demucs_playground")
                     result = client.predict(
-                        handle_file(str(downloaded_audio_path)),
+                        file(str(downloaded_audio_path)),
                         api_name="/predict"
                     )
                     # result is tuple: (vocals_path, bass_path, drums_path, other_path)
