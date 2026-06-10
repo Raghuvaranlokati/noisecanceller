@@ -10,9 +10,56 @@ import yt_dlp
 
 import time
 from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Base directory for all temporary files during processing
 WORK_DIR = Path("temp_workdir")
+
+def process_chunk(chunk_path: Path, dest_dir: Path, isolate_vocals: bool, isolate_instrumental: bool, enhance_speech: bool, chunk_idx: int) -> list[Path]:
+    """Worker function to process a single audio chunk through AI."""
+    from gradio_client import Client
+    
+    generated_files = []
+    
+    if enhance_speech:
+        try:
+            client = Client("hshr/DeepFilterNet2")
+            result = client.predict(
+                str(chunk_path),
+                "None",
+                "0",
+                str(chunk_path),
+                api_name="/denoise"
+            )
+            enhanced_audio_path = result[2]
+            dest_path = dest_dir / f"enhanced_part_{chunk_idx:03d}.wav"
+            shutil.copy(enhanced_audio_path, str(dest_path))
+            generated_files.append(dest_path)
+        except Exception as e:
+            raise RuntimeError(f"DeepFilterNet API Error on chunk {chunk_idx}: {e}")
+
+    if isolate_vocals or isolate_instrumental:
+        try:
+            client = Client("nakas/demucs_playground")
+            result = client.predict(
+                str(chunk_path),
+                api_name="/predict"
+            )
+            if isolate_vocals:
+                vocals_path = result[0]
+                dest_path = dest_dir / f"vocals_part_{chunk_idx:03d}.wav"
+                shutil.copy(vocals_path, str(dest_path))
+                generated_files.append(dest_path)
+                
+            if isolate_instrumental:
+                inst_path = result[3]
+                dest_path = dest_dir / f"instrumental_part_{chunk_idx:03d}.wav"
+                shutil.copy(inst_path, str(dest_path))
+                generated_files.append(dest_path)
+        except Exception as e:
+            raise RuntimeError(f"Demucs API Error on chunk {chunk_idx}: {e}")
+            
+    return generated_files
 
 def process_youtube_video(
     url: str, 
@@ -86,101 +133,79 @@ def process_youtube_video(
             
         target_audio_paths = []
 
-        if isolate_vocals or isolate_instrumental or enhance_speech:
-            from gradio_client import Client
-            
-            # Use Hugging Face APIs instead of local processing
-            if enhance_speech:
-                progress_callback(40, "Removing background noise using DeepFilterNet (Cloud GPU)...", step="3/5")
-                try:
-                    client = Client("hshr/DeepFilterNet2")
-                    result = client.predict(
-                        str(downloaded_audio_path),
-                        "None",
-                        "0",
-                        str(downloaded_audio_path),
-                        api_name="/denoise"
-                    )
-                    # result is tuple: (noisy_audio, noisy_spec, enhanced_audio, enhanced_spec)
-                    enhanced_audio_path = result[2]
-                    
-                    # Copy the downloaded file to our task dir
-                    dest_path = task_dir / "enhanced_speech.wav"
-                    shutil.copy(enhanced_audio_path, str(dest_path))
-                    target_audio_paths.append(("enhanced", dest_path))
-                except Exception as e:
-                    raise RuntimeError(f"DeepFilterNet API Error (Hugging Face Spaces might be down or busy): {e}")
-
-            if isolate_vocals or isolate_instrumental:
-                progress_callback(60, "Isolating vocals and instruments using Demucs (Cloud GPU)...", step="3/5")
-                try:
-                    client = Client("nakas/demucs_playground")
-                    result = client.predict(
-                        str(downloaded_audio_path),
-                        api_name="/predict"
-                    )
-                    # result is tuple: (vocals_path, bass_path, drums_path, other_path)
-                    if isolate_vocals:
-                        vocals_path = result[0]
-                        dest_path = task_dir / "vocals.wav"
-                        shutil.copy(vocals_path, str(dest_path))
-                        target_audio_paths.append(("vocals", dest_path))
-                        
-                    if isolate_instrumental:
-                        # Recombine bass, drums, other to make the instrumental track, or just use 'other'.
-                        # Wait, the frontend usually just wants "instrumental". Since we don't have a combined instrumental track from this specific API, we can just zip them all, or just use 'other'. Actually, 'other' is mostly instruments.
-                        # For simplicity, we just save what we have. Let's save 'other' as instrumental.
-                        inst_path = result[3]
-                        dest_path = task_dir / "instrumental.wav"
-                        shutil.copy(inst_path, str(dest_path))
-                        target_audio_paths.append(("instrumental", dest_path))
-                except Exception as e:
-                    raise RuntimeError(f"Demucs API Error (Hugging Face Spaces might be down or busy): {e}")
-        else:
-            # Skip AI step entirely
-            progress_callback(50, "Skipping AI separation (Instant Splitter Mode)...", step="3/5")
-            target_audio_paths.append(("original", downloaded_audio_path))
-
-        if not target_audio_paths:
-            raise FileNotFoundError("No audio tracks were successfully processed.")
-
-        # Step 4: Split into 50-second chunks
-        progress_callback(80, "Splitting tracks into 50-second segments...", step="4/5")
+        # Step 3: Split into 50-second chunks FIRST
+        progress_callback(30, "Splitting tracks into 50-second segments...", step="3/5")
         
         chunk_length_ms = 50 * 1000 # 50 seconds in ms
-        chunks_dir = task_dir / "chunks"
-        chunks_dir.mkdir(exist_ok=True)
+        raw_chunks_dir = task_dir / "raw_chunks"
+        raw_chunks_dir.mkdir(exist_ok=True)
         
-        for prefix, path in target_audio_paths:
-            with wave.open(str(path), 'rb') as infile:
-                framerate = infile.getframerate()
-                nchannels = infile.getnchannels()
-                sampwidth = infile.getsampwidth()
-                
-                frames_per_chunk = int(framerate * (chunk_length_ms / 1000.0))
-                
-                chunk_idx = 1
-                while True:
-                    frames = infile.readframes(frames_per_chunk)
-                    if not frames:
-                        break
-                        
-                    chunk_file_name = f"{prefix}_part_{chunk_idx:03d}.wav"
-                    out_path = chunks_dir / chunk_file_name
-                    with wave.open(str(out_path), 'wb') as outfile:
-                        outfile.setnchannels(nchannels)
-                        outfile.setsampwidth(sampwidth)
-                        outfile.setframerate(framerate)
-                        outfile.writeframes(frames)
-                        
-                    chunk_idx += 1
+        raw_chunk_paths = []
+        with wave.open(str(downloaded_audio_path), 'rb') as infile:
+            framerate = infile.getframerate()
+            nchannels = infile.getnchannels()
+            sampwidth = infile.getsampwidth()
             
+            frames_per_chunk = int(framerate * (chunk_length_ms / 1000.0))
+            
+            chunk_idx = 1
+            while True:
+                frames = infile.readframes(frames_per_chunk)
+                if not frames:
+                    break
+                    
+                chunk_file_name = f"raw_part_{chunk_idx:03d}.wav"
+                out_path = raw_chunks_dir / chunk_file_name
+                with wave.open(str(out_path), 'wb') as outfile:
+                    outfile.setnchannels(nchannels)
+                    outfile.setsampwidth(sampwidth)
+                    outfile.setframerate(framerate)
+                    outfile.writeframes(frames)
+                    
+                raw_chunk_paths.append((chunk_idx, out_path))
+                chunk_idx += 1
+
+        # Step 4: AI Processing in Parallel
+        processed_chunks_dir = task_dir / "processed_chunks"
+        processed_chunks_dir.mkdir(exist_ok=True)
+        
+        if isolate_vocals or isolate_instrumental or enhance_speech:
+            progress_callback(50, f"Processing {len(raw_chunk_paths)} chunks in parallel (Cloud GPU)...", step="4/5")
+            
+            # Using 5 workers to parallelize but avoid extreme rate limits
+            max_workers = min(5, len(raw_chunk_paths))
+            completed = 0
+            
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                future_to_chunk = {
+                    executor.submit(process_chunk, path, processed_chunks_dir, isolate_vocals, isolate_instrumental, enhance_speech, idx): idx
+                    for idx, path in raw_chunk_paths
+                }
+                
+                for future in as_completed(future_to_chunk):
+                    idx = future_to_chunk[future]
+                    try:
+                        generated = future.result()
+                        completed += 1
+                        progress_callback(50 + int((completed / len(raw_chunk_paths)) * 40), 
+                                       f"Processed {completed}/{len(raw_chunk_paths)} chunks...", step="4/5")
+                    except Exception as exc:
+                        raise RuntimeError(f"Chunk {idx} generated an exception: {exc}")
+                        
+            final_dir_to_zip = processed_chunks_dir
+        else:
+            # Skip AI step entirely
+            progress_callback(80, "Skipping AI separation (Instant Splitter Mode)...", step="4/5")
+            final_dir_to_zip = raw_chunks_dir
+
+        # Step 4: Split into 50-second chunks
+
         # Step 5: Zip the chunks
         progress_callback(95, "Zipping segments...", step="5/5")
         zip_path = WORK_DIR / f"vocals_{task_id}.zip"
         
         with zipfile.ZipFile(str(zip_path), 'w', zipfile.ZIP_DEFLATED) as zipf:
-            for root, _, files in os.walk(str(chunks_dir)):
+            for root, _, files in os.walk(str(final_dir_to_zip)):
                 for file in files:
                     file_path = os.path.join(root, file)
                     zipf.write(file_path, arcname=file)
