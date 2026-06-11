@@ -1,7 +1,7 @@
 FROM python:3.11-slim
 
 # Install ffmpeg and other dependencies
-RUN apt-get update && apt-get install -y ffmpeg curl nodejs gcc g++ && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y ffmpeg curl nodejs gcc g++ git && rm -rf /var/lib/apt/lists/*
 
 # Set up a non-root user (Hugging Face requirement)
 RUN useradd -m -u 1000 user
