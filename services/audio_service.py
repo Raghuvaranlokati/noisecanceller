@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Callable
 from faster_whisper import WhisperModel
 from basic_pitch.inference import predict_and_save
+from basic_pitch import ICASSP_2022_MODEL_PATH
 from audio_separator.separator import Separator
 from pyannote.audio import Pipeline
 from pydub import AudioSegment
@@ -148,13 +149,15 @@ def process_audio_file(
                 predict_and_save(
                     [str(final_dir / "bass.wav")],
                     str(final_dir),
-                    True, False, False, False # save_midi=True
+                    True, False, False, False, # save_midi=True
+                    model_or_model_path=ICASSP_2022_MODEL_PATH
                 )
             if (final_dir / "instrumental.wav").exists():
                 predict_and_save(
                     [str(final_dir / "instrumental.wav")],
                     str(final_dir),
-                    True, False, False, False
+                    True, False, False, False,
+                    model_or_model_path=ICASSP_2022_MODEL_PATH
                 )
                 
         # Step 7: Separate Speakers (Optional)
