@@ -8,7 +8,7 @@ if sys.platform == 'win32':
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from core.worker import start_worker
-from routers import audio, youtube, status
+from routers import audio, status
 
 app = FastAPI(title="Stemify AI API")
 
@@ -26,5 +26,4 @@ start_worker()
 
 # Include Routers
 app.include_router(audio.router)
-app.include_router(youtube.router)
 app.include_router(status.router)
