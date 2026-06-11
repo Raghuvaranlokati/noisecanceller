@@ -3,3 +3,4 @@ uvicorn
 pydantic
 gradio_client
 websockets
+python-multipart
