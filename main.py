@@ -260,7 +260,12 @@ async def get_status(task_id: str):
         # Calculate queue position
         pos = 1
         for job in list(job_queue.queue):
-            if job[0] == task_id:
+            if isinstance(job, dict):
+                job_id = job.get("task_id")
+            else:
+                job_id = job[0]
+                
+            if job_id == task_id:
                 break
             pos += 1
         
@@ -282,10 +287,19 @@ async def download_result(task_id: str):
     if task["status"] != "completed" or not task["result_path"]:
         raise HTTPException(status_code=400, detail="Task not completed yet")
         
+    file_path = task["result_path"]
+    filename = os.path.basename(file_path)
+    
+    media_type = "application/zip"
+    if filename.endswith(".mp3"):
+        media_type = "audio/mpeg"
+    elif filename.endswith(".wav"):
+        media_type = "audio/wav"
+        
     return FileResponse(
-        task["result_path"],
-        media_type="application/zip",
-        filename=f"vocals_{task_id}.zip"
+        file_path,
+        media_type=media_type,
+        filename=filename
     )
 
 @app.get("/api/custom_download/{task_id}")
