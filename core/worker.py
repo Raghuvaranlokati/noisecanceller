@@ -35,7 +35,7 @@ def queue_worker():
         job_queue.task_done()
 
 def cleanup_worker():
-    """Background thread to delete temporary files older than 1 hour"""
+    """Background thread to delete temporary files older than 24 hours"""
     import os
     while True:
         try:
@@ -46,8 +46,8 @@ def cleanup_worker():
                 for filename in os.listdir(directory):
                     filepath = os.path.join(directory, filename)
                     if os.path.isfile(filepath):
-                        # Delete if older than 1 hour (3600 seconds)
-                        if os.stat(filepath).st_mtime < now - 3600:
+                        # Delete if older than 24 hours (86400 seconds)
+                        if os.stat(filepath).st_mtime < now - 86400:
                             try:
                                 os.remove(filepath)
                                 print(f"Cleaned up old file: {filepath}")
