@@ -304,3 +304,25 @@ def package_custom_download(
         # Clean up the staging directory to save space
         if staging_dir.exists():
             shutil.rmtree(str(staging_dir), ignore_errors=True)
+
+ d e f   c r e a t e _ c u s t o m _ z i p ( t a s k _ i d :   s t r ,   r e q u e s t e d _ s t e m s :   l i s t [ s t r ] ,   f o r m a t :   s t r   =   " w a v " ,   c h u n k e d :   b o o l   =   F a l s e ,   f o l d e r _ n a m e :   s t r   =   " c u s t o m _ s t e m s " )   - >   s t r : 
+         i m p o r t   z i p f i l e 
+         i m p o r t   o s 
+         b a s e _ d i r   =   o s . p a t h . j o i n ( " t e m p _ w o r k d i r " ,   t a s k _ i d ) 
+         z i p _ p a t h   =   o s . p a t h . j o i n ( b a s e _ d i r ,   f " { f o l d e r _ n a m e } _ { t a s k _ i d } . z i p " ) 
+         
+         s t e m s _ d i r   =   o s . p a t h . j o i n ( b a s e _ d i r ,   " f i n a l _ s t e m s " ) 
+         i f   c h u n k e d : 
+                 s t e m s _ d i r   =   o s . p a t h . j o i n ( b a s e _ d i r ,   " c h u n k e d " ) 
+                 
+         w i t h   z i p f i l e . Z i p F i l e ( z i p _ p a t h ,   " w " ,   z i p f i l e . Z I P _ D E F L A T E D )   a s   z i p f : 
+                 i f   o s . p a t h . e x i s t s ( s t e m s _ d i r ) : 
+                         f o r   r o o t ,   _ ,   f i l e s   i n   o s . w a l k ( s t e m s _ d i r ) : 
+                                 f o r   f i l e   i n   f i l e s : 
+                                         i f   f i l e . e n d s w i t h ( f " . { f o r m a t } " ) : 
+                                                 #   C h e c k   i f   t h i s   f i l e   i s   o n e   o f   t h e   r e q u e s t e d   s t e m s 
+                                                 i f   a n y ( s t e m . l o w e r ( )   i n   f i l e . l o w e r ( )   f o r   s t e m   i n   r e q u e s t e d _ s t e m s ) : 
+                                                         z i p f . w r i t e ( o s . p a t h . j o i n ( r o o t ,   f i l e ) ,   f i l e ) 
+         r e t u r n   z i p _ p a t h 
+  
+ 
