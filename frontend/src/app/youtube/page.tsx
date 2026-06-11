@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, Suspense } from "react";
 import { useUser } from "@clerk/nextjs";
-import { Search, Download, Youtube, Settings2, ShieldCheck, Copy } from 'lucide-react';
+import { Search, Download, Video, Settings2, ShieldCheck, Copy, Lock } from 'lucide-react';
 import QueueWaitingRoom from "../../components/QueueWaitingRoom";
 
 function YoutubeContent() {
@@ -94,7 +94,7 @@ function YoutubeContent() {
         <div className="flex flex-col md:flex-row items-center justify-between mb-12">
           <div>
             <h1 className="text-5xl font-black tracking-tight mb-2 flex items-center gap-4">
-              <Youtube className="w-12 h-12 text-red-500" />
+              <Video className="w-12 h-12 text-red-500" />
               YouTube <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-orange-500">Converter</span>
             </h1>
             <p className="text-[#a1a1aa] text-lg max-w-2xl mt-4">
