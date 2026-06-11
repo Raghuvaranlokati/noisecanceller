@@ -6,8 +6,12 @@ DB_FILE = "tasks_db.json"
 
 def load_db():
     if os.path.exists(DB_FILE):
-        with open(DB_FILE, "r") as f:
-            return json.load(f)
+        try:
+            with open(DB_FILE, "r") as f:
+                return json.load(f)
+        except Exception:
+            # If the JSON is corrupted, return empty dictionary
+            return {}
     return {}
 
 tasks_status = load_db()
