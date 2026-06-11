@@ -2,7 +2,7 @@
 torch
 torchvision
 torchaudio
-numpy>=1.26.4
+numpy
 fastapi
 uvicorn
 pydantic
