@@ -112,6 +112,21 @@ export default function Navbar() {
             <Link href="/pricing" onClick={() => setIsOpen(false)} className="text-[#E4E6EB] hover:text-white block px-3 py-2 rounded-md text-base font-medium">Pricing</Link>
             <Link href="/faq" onClick={() => setIsOpen(false)} className="text-[#E4E6EB] hover:text-white block px-3 py-2 rounded-md text-base font-medium">FAQ</Link>
             <Link href="/contact" onClick={() => setIsOpen(false)} className="text-[#E4E6EB] hover:text-white block px-3 py-2 rounded-md text-base font-medium">Contact</Link>
+            
+            <div className="px-3 py-3">
+              <form onSubmit={handleSearch} className="w-full relative">
+                <input 
+                  type="text" 
+                  placeholder="Task ID..." 
+                  value={searchId}
+                  onChange={(e) => setSearchId(e.target.value)}
+                  className="w-full bg-[#18191A] border border-white/10 rounded-full py-2 pl-4 pr-10 text-sm text-white focus:outline-none focus:border-[#1877F2]"
+                />
+                <button type="submit" onClick={() => setIsOpen(false)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#1877F2]">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                </button>
+              </form>
+            </div>
             <div className="pt-4 border-t border-white/10 flex flex-col gap-3 px-3">
               {isLoaded && !isSignedIn && (
                 <>
