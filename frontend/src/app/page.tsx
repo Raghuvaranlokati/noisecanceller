@@ -182,7 +182,7 @@ function HomeContent() {
       {/* Massive Hero Section */}
       <div className="pt-16 pb-10 px-4">
         <div className="max-w-4xl mx-auto text-center">
-          <h1 className="text-4xl md:text-6xl font-bold text-white tracking-tight mb-4">
+          <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold text-white tracking-tight mb-4">
             Extract <span className="text-[#1877F2]">Vocals & Stems</span> instantly.
           </h1>
           <p className="text-lg md:text-xl text-gray-400 mb-8 max-w-2xl mx-auto">
@@ -370,7 +370,7 @@ function HomeContent() {
               {/* Massive Dropzone */}
               {!resultZip && !loading && (
               <div 
-                className="border-2 border-dashed border-[#27272a] hover:border-[#1877F2] bg-[#050505] rounded-3xl p-16 md:p-24 text-center cursor-pointer transition-all group h-full flex flex-col items-center justify-center"
+                className="border-2 border-dashed border-[#27272a] hover:border-[#1877F2] bg-[#050505] rounded-3xl p-8 sm:p-12 md:p-24 text-center cursor-pointer transition-all group h-full flex flex-col items-center justify-center"
                 onDrop={handleDrop}
                 onDragOver={handleDragOver}
                 onClick={() => document.getElementById("fileInput")?.click()}
@@ -484,9 +484,9 @@ function HomeContent() {
                   <h3 className="text-3xl font-bold text-white mb-2">Extraction Complete!</h3>
                   <p className="text-gray-400 text-md mb-4">Your stems have been successfully separated.</p>
                   
-                  <div className="flex items-center justify-center gap-2 bg-[#1a1a1a] border border-[#27272a] rounded-xl px-4 py-3 w-max mx-auto">
+                  <div className="flex flex-col sm:flex-row items-center justify-center gap-2 bg-[#1a1a1a] border border-[#27272a] rounded-xl px-4 py-3 w-full sm:w-max mx-auto">
                     <span className="text-gray-500 text-sm font-bold uppercase tracking-wider">Task ID:</span>
-                    <span className="text-white font-mono text-sm tracking-wider">{taskId}</span>
+                    <span className="text-white font-mono text-xs sm:text-sm tracking-wider break-all">{taskId}</span>
                     <button 
                       onClick={() => {
                         if(taskId) navigator.clipboard.writeText(taskId);
@@ -607,7 +607,7 @@ function HomeContent() {
                     href={`${baseUrl}/api/custom_download/${taskId}?stems=${Object.entries(dlStems).filter(([k,v]) => v).map(([k]) => k).join(',')}&format=${dlFormat}&chunked=${dlChunked}&folder_name=${encodeURIComponent(dlFolderName)}`} 
                     target="_blank" 
                     rel="noreferrer"
-                    className="inline-flex items-center gap-3 py-4 px-8 bg-[#1877F2] text-white rounded-full text-lg font-bold hover:bg-[#166FE5] hover:-translate-y-1 shadow-[0_10px_30px_-10px_rgba(24,119,242,0.5)] transition-all"
+                    className="inline-flex items-center justify-center gap-3 py-4 px-6 md:px-8 bg-[#1877F2] text-white rounded-full text-base md:text-lg font-bold hover:bg-[#166FE5] hover:-translate-y-1 shadow-[0_10px_30px_-10px_rgba(24,119,242,0.5)] transition-all w-full sm:w-auto"
                   >
                     <UploadCloud className="w-6 h-6 rotate-180" />
                     Download Custom ZIP

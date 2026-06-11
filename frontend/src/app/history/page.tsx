@@ -57,7 +57,7 @@ function TaskStatusRow({ item, onDelete }: { item: any, onDelete: (id: string) =
   }, [item.taskId, item.id, onDelete]);
 
   return (
-    <div className="p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-white/5 transition-colors border-b border-[#27272a] last:border-0">
+    <div className="p-4 md:p-6 flex flex-col md:flex-row md:items-center justify-between gap-6 hover:bg-white/5 transition-colors border-b border-[#27272a] last:border-0">
       <div>
         <h3 className="text-lg font-bold text-white truncate max-w-sm mb-2">
           {item.filename || "Unknown Audio"}
@@ -79,7 +79,7 @@ function TaskStatusRow({ item, onDelete }: { item: any, onDelete: (id: string) =
         </div>
       </div>
       
-      <div className="flex items-center gap-6">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 w-full md:w-auto">
         {/* Animated Status Indicator */}
         <div className="flex items-center gap-2 min-w-[140px]">
           {status === "loading" && <Loader2 className="w-5 h-5 text-gray-500 animate-spin" />}
@@ -98,7 +98,7 @@ function TaskStatusRow({ item, onDelete }: { item: any, onDelete: (id: string) =
 
         <Link 
           href={`/studio/${item.taskId}`}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold transition-all ${
+          className={`flex items-center justify-center sm:justify-start gap-2 px-4 py-3 sm:py-2 rounded-lg font-bold transition-all w-full sm:w-auto text-center ${
             status === 'processing' 
               ? 'bg-[#1877F2]/10 text-[#1877F2] hover:bg-[#1877F2]/20 border border-[#1877F2]/30'
               : status === 'completed'
