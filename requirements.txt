@@ -12,3 +12,4 @@ faster-whisper
 audio-separator[cpu]
 pyannote.audio
 pydub
+yt-dlp
