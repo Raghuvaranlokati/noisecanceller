@@ -1,7 +1,7 @@
 import time
 import threading
 from core.state import job_queue, tasks_status, save_db, state
-from core.tasks import run_audio_processing, run_youtube_download
+from core.tasks import run_audio_processing
 
 def queue_worker():
     while True:
@@ -30,8 +30,6 @@ def queue_worker():
                 args = job.get("args")
                 file_path, isolate_vocals, isolate_instrumental, four_stem, enhance_speech, stem_to_midi, de_reverb, lyric_sync, separate_speakers, user_email = args
             run_audio_processing(task_id, file_path, isolate_vocals, isolate_instrumental, four_stem, enhance_speech, stem_to_midi, de_reverb, lyric_sync, separate_speakers, user_email)
-        elif task_type == "youtube":
-            run_youtube_download(task_id, job.get("url"), job.get("format"), job.get("email"))
         
         state.active_task_id = None
         job_queue.task_done()

@@ -1,7 +1,6 @@
 import time
 from core.state import tasks_status, save_db
 from services.audio_service import process_audio_file
-from services.youtube_service import download_youtube_audio
 
 def send_simulated_email(email: str, task_id: str):
     print("\n" + "="*50)
@@ -48,34 +47,3 @@ def run_audio_processing(task_id: str, file_path: str, isolate_vocals: bool, iso
         tasks_status[task_id]["status"] = "failed"
         tasks_status[task_id]["message"] = str(e)
         print(f"Error processing {task_id}: {e}")
-
-def run_youtube_download(task_id: str, youtube_url: str, format_choice: str, user_email: str):
-    try:
-        def progress_callback(progress_percent, message, **kwargs):
-            tasks_status[task_id]["progress"] = progress_percent
-            tasks_status[task_id]["message"] = message
-            for key, value in kwargs.items():
-                tasks_status[task_id][key] = value
-            save_db()
-            
-        downloaded_file = download_youtube_audio(
-            youtube_url, 
-            format_choice, 
-            task_id, 
-            progress_callback
-        )
-        
-        tasks_status[task_id]["status"] = "completed"
-        tasks_status[task_id]["progress"] = 100
-        tasks_status[task_id]["message"] = "Download complete! Ready to save."
-        tasks_status[task_id]["result_path"] = downloaded_file
-        tasks_status[task_id]["completed_time"] = time.time()
-        save_db()
-        
-        if user_email:
-            send_simulated_email(user_email, task_id)
-            
-    except Exception as e:
-        tasks_status[task_id]["status"] = "failed"
-        tasks_status[task_id]["message"] = str(e)
-        print(f"Error processing youtube {task_id}: {e}")
