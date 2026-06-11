@@ -2,7 +2,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useSearchParams } from "next/navigation";
-import { UploadCloud, Music, AudioLines, Settings2, ShieldCheck, Zap, Lock, Sliders, Activity, Mic2, Search, LogOut, History, Copy, Check, FileMusic, AlignLeft } from 'lucide-react';
+import { UploadCloud, Music, AudioLines, Settings2, ShieldCheck, Zap, Lock, Sliders, Activity, Mic2, Search, LogOut, History, Copy, Check, FileMusic, AlignLeft, Users } from 'lucide-react';
 import { db } from "../lib/firebase";
 import { collection, addDoc, getDocs, query, where, deleteDoc, doc, serverTimestamp, orderBy } from "firebase/firestore";
 import ExtractionFlowDiagram from "../components/ExtractionFlowDiagram";
@@ -43,6 +43,7 @@ function HomeContent() {
   const [stemToMidi, setStemToMidi] = useState<boolean>(false);
   const [deReverb, setDeReverb] = useState<boolean>(false);
   const [lyricSync, setLyricSync] = useState<boolean>(false);
+  const [separateSpeakers, setSeparateSpeakers] = useState<boolean>(false);
   
   // Download Customization Options
   const [dlFormat, setDlFormat] = useState<string>("mp3");
@@ -95,6 +96,7 @@ function HomeContent() {
     formData.append("stem_to_midi", stemToMidi.toString());
     formData.append("de_reverb", deReverb.toString());
     formData.append("lyric_sync", lyricSync.toString());
+    formData.append("separate_speakers", separateSpeakers.toString());
     formData.append("email", user?.primaryEmailAddress?.emailAddress || "");
 
     try {
@@ -315,6 +317,27 @@ function HomeContent() {
                 </div>
                 <div className={`w-12 h-6 rounded-full p-1 transition-colors ${lyricSync ? 'bg-emerald-500' : 'bg-[#27272a]'}`}>
                   <div className={`w-4 h-4 bg-white rounded-full transition-transform ${lyricSync ? 'translate-x-6' : 'translate-x-0'}`} />
+                </div>
+              </button>
+
+              <button 
+                onClick={() => setSeparateSpeakers(!separateSpeakers)}
+                className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all text-left relative overflow-hidden group ${
+                  separateSpeakers 
+                    ? 'bg-purple-500/10 border-purple-500 shadow-[0_0_15px_rgba(168,85,247,0.15)]' 
+                    : 'bg-[#050505] border-[#27272a] hover:border-gray-500'
+                }`}
+              >
+                <div className={`absolute top-0 left-0 w-1 h-full ${separateSpeakers ? 'bg-purple-500' : 'bg-transparent'}`}></div>
+                <div className="flex items-center gap-3">
+                  <Users className={`w-5 h-5 ${separateSpeakers ? 'text-purple-500' : 'text-gray-500'}`} />
+                  <div className="flex flex-col">
+                    <span className={`font-bold ${separateSpeakers ? 'text-white' : 'text-gray-300'}`}>Separate Speakers <span className="ml-2 text-[9px] bg-purple-500/20 text-purple-500 px-2 py-0.5 rounded font-bold uppercase">Pro</span></span>
+                    <span className="text-[10px] text-gray-500">Auto-cut vocals into Speaker 1, Speaker 2, etc.</span>
+                  </div>
+                </div>
+                <div className={`w-12 h-6 rounded-full p-1 transition-colors ${separateSpeakers ? 'bg-purple-500' : 'bg-[#27272a]'}`}>
+                  <div className={`w-4 h-4 bg-white rounded-full transition-transform ${separateSpeakers ? 'translate-x-6' : 'translate-x-0'}`} />
                 </div>
               </button>
             </div>

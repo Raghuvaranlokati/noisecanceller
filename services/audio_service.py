@@ -9,6 +9,9 @@ from gradio_client import Client
 from faster_whisper import WhisperModel
 from basic_pitch.inference import predict_and_save
 from audio_separator.separator import Separator
+from pyannote.audio import Pipeline
+from pydub import AudioSegment
+import torch
 
 # Base directory for all temporary files during processing
 WORK_DIR = Path("temp_workdir")
@@ -31,7 +34,8 @@ def process_audio_file(
     enhance_speech: bool = False,
     stem_to_midi: bool = False,
     de_reverb: bool = False,
-    lyric_sync: bool = False
+    lyric_sync: bool = False,
+    separate_speakers: bool = False
 ) -> str:
     """
     1. Converts uploaded file to WAV format.
@@ -162,7 +166,49 @@ def process_audio_file(
             except Exception as e:
                 print(f"Warning: Stem-to-MIDI failed: {e}")
                 
-        # Step 7: Zip the results
+        # Step 7: Separate Speakers (Optional)
+        if separate_speakers and (final_dir / "vocals.wav").exists():
+            progress_callback(88, "Detecting different speakers...", step="2/3")
+            try:
+                hf_token = os.environ.get("HF_TOKEN")
+                if not hf_token:
+                    raise Exception("HF_TOKEN not found in environment. Pyannote requires it.")
+                    
+                pipeline = Pipeline.from_pretrained(
+                    "pyannote/speaker-diarization-community-1",
+                    use_auth_token=hf_token
+                )
+                
+                # Use CPU for now to prevent VRAM crashes, or GPU if available
+                device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+                pipeline.to(device)
+
+                vocals_path = str(final_dir / "vocals.wav")
+                diarization = pipeline(vocals_path)
+                
+                full_audio = AudioSegment.from_wav(vocals_path)
+                speaker_segments = {}
+                
+                # Group segments by speaker
+                for turn, _, speaker in diarization.itertracks(yield_label=True):
+                    start_ms = int(turn.start * 1000)
+                    end_ms = int(turn.end * 1000)
+                    segment = full_audio[start_ms:end_ms]
+                    
+                    if speaker not in speaker_segments:
+                        speaker_segments[speaker] = segment
+                    else:
+                        speaker_segments[speaker] += segment
+                        
+                # Export distinct speaker files
+                for speaker, audio in speaker_segments.items():
+                    # Exporting as e.g., Speaker_0.wav, Speaker_1.wav
+                    audio.export(str(final_dir / f"Speaker_{speaker.split('_')[-1]}.wav"), format="wav")
+                    
+            except Exception as e:
+                print(f"Warning: Speaker Separation failed: {e}")
+
+        # Step 8: Zip the results
         progress_callback(90, "Zipping stems...", step="3/3")
         zip_path = WORK_DIR / f"vocals_{task_id}.zip"
         
