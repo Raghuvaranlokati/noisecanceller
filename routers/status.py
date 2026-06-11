@@ -97,3 +97,22 @@ async def custom_download(
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/stream/{task_id}/{filename}")
+async def stream_audio(task_id: str, filename: str):
+    if task_id not in tasks_status:
+        raise HTTPException(status_code=404, detail="Task not found")
+        
+    task = tasks_status[task_id]
+    if task["status"] != "completed":
+        raise HTTPException(status_code=400, detail="Task not completed yet")
+        
+    file_path = os.path.join("temp_workdir", task_id, "final_stems", filename)
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="File not found")
+        
+    media_type = "audio/wav"
+    if filename.endswith(".mp3"):
+        media_type = "audio/mpeg"
+        
+    return FileResponse(file_path, media_type=media_type)
