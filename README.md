@@ -1,3 +1,12 @@
+---
+title: noisecanceller
+emoji: 🎵
+colorFrom: blue
+colorTo: purple
+sdk: docker
+pinned: false
+---
+
 <div align="center">
   <div style="background-color: #1877F2; width: 80px; height: 80px; border-radius: 16px; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
     <span style="color: white; font-size: 40px; font-weight: bold; font-family: sans-serif;">S</span>
