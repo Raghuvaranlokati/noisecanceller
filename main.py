@@ -188,6 +188,39 @@ async def download_result(task_id: str):
         filename=f"vocals_{task_id}.zip"
     )
 
+@app.get("/api/custom_download/{task_id}")
+async def custom_download(
+    task_id: str, 
+    stems: str = "vocals", # comma separated
+    format: str = "wav",
+    chunked: str = "false"
+):
+    if task_id not in tasks_status:
+        raise HTTPException(status_code=404, detail="Task not found")
+        
+    task = tasks_status[task_id]
+    if task["status"] != "completed":
+        raise HTTPException(status_code=400, detail="Task not completed yet")
+        
+    stems_list = [s.strip() for s in stems.split(",")]
+    is_chunked = chunked.lower() == "true"
+    
+    from services.audio_service import package_custom_download
+    try:
+        zip_path = package_custom_download(
+            task_id, 
+            stems=stems_list, 
+            output_format=format, 
+            chunked=is_chunked
+        )
+        return FileResponse(
+            zip_path,
+            media_type="application/zip",
+            filename=f"custom_stems_{task_id}.zip"
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/api/stream/{task_id}/{filename}")
 async def stream_audio(task_id: str, filename: str):
     if task_id not in tasks_status:
@@ -197,16 +230,10 @@ async def stream_audio(task_id: str, filename: str):
     if task["status"] != "completed" or not task["result_path"]:
         raise HTTPException(status_code=400, detail="Task not completed yet")
         
-    # The audio files are inside temp_workdir/{task_id}/processed_chunks
-    # Since we are returning the final joined files or chunks, wait, we need to make sure audio_service returns joined files!
-    # Let's serve it directly from the task dir
-    file_path = os.path.join("temp_workdir", task_id, "processed_chunks", filename)
+    file_path = os.path.join("temp_workdir", task_id, "final_stems", filename)
     if not os.path.exists(file_path):
-        # Fallback to checking raw chunks if no AI was applied
-        file_path = os.path.join("temp_workdir", task_id, "raw_chunks", filename)
-        if not os.path.exists(file_path):
-            raise HTTPException(status_code=404, detail="File not found")
-            
+        raise HTTPException(status_code=404, detail="File not found")
+        
     return FileResponse(file_path, media_type="audio/wav")
 
 if __name__ == "__main__":

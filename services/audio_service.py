@@ -113,3 +113,80 @@ def process_audio_file(
         
     finally:
         pass
+
+def package_custom_download(
+    task_id: str, 
+    stems: list[str], 
+    output_format: str = "wav", 
+    chunked: bool = False
+) -> str:
+    """
+    Packages a custom download based on the UI selections.
+    Supports on-the-fly format conversion (mp3/wav) and chunking into 50s segments.
+    """
+    task_dir = WORK_DIR / task_id
+    final_stems_dir = task_dir / "final_stems"
+    
+    if not final_stems_dir.exists():
+        raise FileNotFoundError("Processing not complete or files missing.")
+        
+    # Create a unique staging directory for this specific download configuration
+    timestamp = int(time.time())
+    staging_dir = task_dir / f"custom_pkg_{timestamp}"
+    staging_dir.mkdir(parents=True, exist_ok=True)
+    
+    try:
+        for stem in stems:
+            stem_file = final_stems_dir / f"{stem.lower()}.wav"
+            if not stem_file.exists():
+                continue
+                
+            # Create subfolder for this stem e.g., "Vocals/"
+            stem_folder = staging_dir / stem.capitalize()
+            stem_folder.mkdir(exist_ok=True)
+            
+            if chunked:
+                # Use FFmpeg to split into 50 second chunks ad0001, ad0002...
+                ext = output_format.lower()
+                out_pattern = str(stem_folder / f"ad%04d.{ext}")
+                
+                cmd = [
+                    "ffmpeg", "-y", "-i", str(stem_file),
+                    "-f", "segment", "-segment_time", "50",
+                    "-segment_start_number", "1"
+                ]
+                
+                if ext == "mp3":
+                    cmd.extend(["-c:a", "libmp3lame", "-b:a", "320k"])
+                
+                cmd.append(out_pattern)
+                subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            else:
+                # No chunking, just convert/copy
+                ext = output_format.lower()
+                out_file = stem_folder / f"{stem.lower()}.{ext}"
+                
+                if ext == "wav":
+                    shutil.copy(str(stem_file), str(out_file))
+                else:
+                    cmd = [
+                        "ffmpeg", "-y", "-i", str(stem_file),
+                        "-c:a", "libmp3lame", "-b:a", "320k",
+                        str(out_file)
+                    ]
+                    subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    
+        # Zip everything up
+        zip_path = task_dir / f"custom_download_{timestamp}.zip"
+        with zipfile.ZipFile(str(zip_path), 'w', zipfile.ZIP_DEFLATED) as zipf:
+            for root, _, files in os.walk(str(staging_dir)):
+                for file in files:
+                    file_path = os.path.join(root, file)
+                    arcname = os.path.relpath(file_path, str(staging_dir))
+                    zipf.write(file_path, arcname=arcname)
+                    
+        return str(zip_path)
+    finally:
+        # Clean up the staging directory to save space
+        if staging_dir.exists():
+            shutil.rmtree(str(staging_dir), ignore_errors=True)

@@ -37,6 +37,16 @@ function HomeContent() {
   // Feature Toggles
   const [fourStem, setFourStem] = useState<boolean>(false);
   const [enhance, setEnhance] = useState<boolean>(false);
+  
+  // Download Customization Options
+  const [dlFormat, setDlFormat] = useState<string>("mp3");
+  const [dlChunked, setDlChunked] = useState<boolean>(true);
+  const [dlStems, setDlStems] = useState<Record<string, boolean>>({
+    vocals: true,
+    instrumental: true,
+    drums: true,
+    bass: true
+  });
 
   const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
 
@@ -437,18 +447,77 @@ function HomeContent() {
                   </div>
                 </div>
 
-                <div className="flex justify-center">
+                <div className="bg-[#111] border border-[#27272a] rounded-2xl p-6 mb-8 w-full max-w-xl mx-auto">
+                  <h4 className="text-lg font-bold text-white mb-4">Download Customization</h4>
+                  
+                  <div className="space-y-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-400 mb-2">Select Stems to Include</label>
+                      <div className="flex flex-wrap gap-3">
+                        <label className="flex items-center gap-2 bg-[#1a1a1a] px-4 py-2 rounded-lg border border-[#27272a] cursor-pointer hover:border-gray-500 transition-colors">
+                          <input type="checkbox" checked={dlStems.vocals} onChange={(e) => setDlStems({...dlStems, vocals: e.target.checked})} className="accent-[#1877F2]" />
+                          <span className="text-gray-300">Vocals</span>
+                        </label>
+                        <label className="flex items-center gap-2 bg-[#1a1a1a] px-4 py-2 rounded-lg border border-[#27272a] cursor-pointer hover:border-gray-500 transition-colors">
+                          <input type="checkbox" checked={dlStems.instrumental} onChange={(e) => setDlStems({...dlStems, instrumental: e.target.checked})} className="accent-[#1877F2]" />
+                          <span className="text-gray-300">Instrumental</span>
+                        </label>
+                        {fourStem && (
+                          <>
+                            <label className="flex items-center gap-2 bg-[#1a1a1a] px-4 py-2 rounded-lg border border-[#27272a] cursor-pointer hover:border-gray-500 transition-colors">
+                              <input type="checkbox" checked={dlStems.drums} onChange={(e) => setDlStems({...dlStems, drums: e.target.checked})} className="accent-[#1877F2]" />
+                              <span className="text-gray-300">Drums</span>
+                            </label>
+                            <label className="flex items-center gap-2 bg-[#1a1a1a] px-4 py-2 rounded-lg border border-[#27272a] cursor-pointer hover:border-gray-500 transition-colors">
+                              <input type="checkbox" checked={dlStems.bass} onChange={(e) => setDlStems({...dlStems, bass: e.target.checked})} className="accent-[#1877F2]" />
+                              <span className="text-gray-300">Bass</span>
+                            </label>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="flex flex-col md:flex-row gap-6">
+                      <div className="flex-1">
+                        <label className="block text-sm font-medium text-gray-400 mb-2">Audio Format</label>
+                        <select 
+                          value={dlFormat} 
+                          onChange={(e) => setDlFormat(e.target.value)}
+                          className="w-full bg-[#1a1a1a] text-white border border-[#27272a] rounded-lg px-4 py-3 outline-none focus:border-[#1877F2]"
+                        >
+                          <option value="mp3">MP3 (Fast, Small Size)</option>
+                          <option value="wav">WAV (Lossless Quality)</option>
+                        </select>
+                      </div>
+                      <div className="flex-1">
+                        <label className="block text-sm font-medium text-gray-400 mb-2">Delivery Structure</label>
+                        <select 
+                          value={dlChunked ? "chunked" : "single"} 
+                          onChange={(e) => setDlChunked(e.target.value === "chunked")}
+                          className="w-full bg-[#1a1a1a] text-white border border-[#27272a] rounded-lg px-4 py-3 outline-none focus:border-[#1877F2]"
+                        >
+                          <option value="chunked">50s Chunks (ad0001...) in Folders</option>
+                          <option value="single">Single Full-Length Files</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-center flex-col items-center gap-4">
                   <a 
-                    href={`${baseUrl}/api/download/${taskId}`} 
+                    href={`${baseUrl}/api/custom_download/${taskId}?stems=${Object.entries(dlStems).filter(([k,v]) => v).map(([k]) => k).join(',')}&format=${dlFormat}&chunked=${dlChunked}`} 
                     target="_blank" 
                     rel="noreferrer"
                     className="inline-flex items-center gap-3 py-4 px-8 bg-[#1877F2] text-white rounded-full text-lg font-bold hover:bg-[#166FE5] hover:-translate-y-1 shadow-[0_10px_30px_-10px_rgba(24,119,242,0.5)] transition-all"
                   >
                     <UploadCloud className="w-6 h-6 rotate-180" />
-                    Download ZIP
+                    Download Custom ZIP
                   </a>
+                  <p className="text-gray-500 text-xs text-center max-w-sm">
+                    Files will be dynamically converted and packaged on our servers. This takes a few seconds.
+                  </p>
                 </div>
-                
                 <div className="text-center mt-6">
                   <button onClick={() => {setResultZip(null); setFile(null);}} className="text-gray-400 hover:text-white underline text-sm">
                     Process another file
