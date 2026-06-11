@@ -97,21 +97,3 @@ async def custom_download(
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-@router.get("/stream/{task_id}/{file_name}")
-async def stream_audio(task_id: str, file_name: str):
-    """Streams the separated audio directly to the frontend player."""
-    file_path = os.path.join("temp_workdir", task_id, "final_stems", file_name)
-    
-    # Path traversal protection
-    if ".." in file_name or "/" in file_name:
-        raise HTTPException(status_code=400, detail="Invalid filename")
-        
-    if not os.path.exists(file_path):
-        raise HTTPException(status_code=404, detail="Audio file not found")
-        
-    return FileResponse(
-        file_path, 
-        media_type="audio/wav",
-        headers={"Accept-Ranges": "bytes"}
-    )
