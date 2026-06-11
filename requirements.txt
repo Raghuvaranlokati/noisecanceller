@@ -1,6 +1,6 @@
 fastapi
 uvicorn
 pydantic
-gradio_client
+gradio_client==1.3.0
 websockets
 python-multipart

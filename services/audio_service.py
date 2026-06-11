@@ -20,7 +20,7 @@ def process_chunk(chunk_path: Path, dest_dir: Path, isolate_vocals: bool, isolat
     generated_files = []
     
     if enhance_speech:
-        client = Client("hshr/DeepFilterNet2")
+        client = Client("hshr/DeepFilterNet2", hf_token=os.environ.get("HF_TOKEN"))
         for attempt in range(4):
             try:
                 result = client.predict(
@@ -42,7 +42,7 @@ def process_chunk(chunk_path: Path, dest_dir: Path, isolate_vocals: bool, isolat
                     raise RuntimeError(f"DeepFilterNet API Error on chunk {chunk_idx}: {e}")
 
     if isolate_vocals or isolate_instrumental or four_stem:
-        client = Client("nakas/demucs_playground")
+        client = Client("nakas/demucs_playground", hf_token=os.environ.get("HF_TOKEN"))
         for attempt in range(4):
             try:
                 result = client.predict(
