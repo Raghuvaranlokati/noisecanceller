@@ -13,6 +13,15 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 # Base directory for all temporary files during processing
 WORK_DIR = Path("temp_workdir")
 
+# Global dictionary to cache Gradio Clients and prevent rapid WebSocket connections/disconnections
+_CLIENTS = {}
+
+def get_client(model_id: str):
+    from gradio_client import Client
+    if model_id not in _CLIENTS:
+        _CLIENTS[model_id] = Client(model_id, hf_token=os.environ.get("HF_TOKEN"))
+    return _CLIENTS[model_id]
+
 def process_chunk(chunk_path: Path, dest_dir: Path, isolate_vocals: bool, isolate_instrumental: bool, four_stem: bool, enhance_speech: bool, chunk_idx: int) -> list[Path]:
     """Worker function to process a single audio chunk through AI."""
     from gradio_client import Client
@@ -20,7 +29,7 @@ def process_chunk(chunk_path: Path, dest_dir: Path, isolate_vocals: bool, isolat
     generated_files = []
     
     if enhance_speech:
-        client = Client("hshr/DeepFilterNet2", hf_token=os.environ.get("HF_TOKEN"))
+        client = get_client("hshr/DeepFilterNet2")
         for attempt in range(4):
             try:
                 result = client.predict(
@@ -42,7 +51,7 @@ def process_chunk(chunk_path: Path, dest_dir: Path, isolate_vocals: bool, isolat
                     raise RuntimeError(f"DeepFilterNet API Error on chunk {chunk_idx}: {e}")
 
     if isolate_vocals or isolate_instrumental or four_stem:
-        client = Client("nakas/demucs_playground", hf_token=os.environ.get("HF_TOKEN"))
+        client = get_client("nakas/demucs_playground")
         for attempt in range(4):
             try:
                 result = client.predict(
