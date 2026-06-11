@@ -63,9 +63,11 @@ def process_audio_file(
                 cmd.insert(6, "vocals")
                 
             try:
-                subprocess.run(cmd, check=True)
-            except subprocess.CalledProcessError as e:
-                raise RuntimeError(f"Native Demucs processing failed. Please ensure your file is valid. Error: {e}")
+                result = subprocess.run(cmd, capture_output=True, text=True)
+                if result.returncode != 0:
+                    raise RuntimeError(f"Native Demucs processing failed. STDOUT: {result.stdout}\nSTDERR: {result.stderr}")
+            except Exception as e:
+                raise RuntimeError(f"Native Demucs processing crashed. Error: {e}")
                 
             # Demucs outputs to: {demucs_out}/htdemucs/converted/{stem}.wav
             demucs_converted_dir = demucs_out / "htdemucs" / "converted"
