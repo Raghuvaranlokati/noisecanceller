@@ -154,7 +154,19 @@ def run_audio_processing(task_id: str, file_path: str, isolate_vocals: bool, iso
 @app.get("/api/status/{task_id}")
 async def get_status(task_id: str):
     if task_id not in tasks_status:
-        raise HTTPException(status_code=404, detail="Task not found")
+        # Check if it exists on disk (rehydration after server restart)
+        final_stems_dir = os.path.join("temp_workdir", task_id, "final_stems")
+        if os.path.exists(final_stems_dir):
+            tasks_status[task_id] = {
+                "status": "completed",
+                "progress": 100,
+                "message": "Recovered from disk",
+                "result_path": os.path.join("temp_workdir", task_id, f"custom_stems_{task_id}.zip"), # Might not exist, but custom_download recreates anyway
+                "start_time": time.time(),
+                "completed_time": time.time()
+            }
+        else:
+            raise HTTPException(status_code=404, detail="Task not found")
         
     status_data = tasks_status[task_id].copy()
     

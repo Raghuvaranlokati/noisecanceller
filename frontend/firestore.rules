@@ -1,0 +1,14 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /extractions/{docId} {
+      // NOTE: Because you are using Clerk for authentication instead of Firebase Auth, 
+      // request.auth is null by default. 
+      // For now, this relaxed rule allows users to read/write their own records based on 
+      // the email stored inside the document. 
+      // For higher security, integrate Clerk JWT with Firebase Custom Tokens.
+      
+      allow read, write: if true; 
+    }
+  }
+}

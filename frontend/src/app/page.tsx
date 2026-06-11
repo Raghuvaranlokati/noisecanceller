@@ -2,7 +2,9 @@
 import { useState, useEffect, Suspense } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useSearchParams } from "next/navigation";
-import { UploadCloud, Music, AudioLines, Settings2, ShieldCheck, Zap, Lock, Sliders, Activity, Mic2, Search, LogOut } from 'lucide-react';
+import { UploadCloud, Music, AudioLines, Settings2, ShieldCheck, Zap, Lock, Sliders, Activity, Mic2, Search, LogOut, History, Copy, Check } from 'lucide-react';
+import { db } from "../lib/firebase";
+import { collection, addDoc, getDocs, query, where, deleteDoc, doc, serverTimestamp, orderBy } from "firebase/firestore";
 
 function HomeContent() {
   const [file, setFile] = useState<File | null>(null);
@@ -100,6 +102,21 @@ function HomeContent() {
 
       const data = await res.json();
       setTaskId(data.task_id);
+      
+      // Save to Firebase History
+      if (user?.primaryEmailAddress?.emailAddress) {
+        try {
+          await addDoc(collection(db, "extractions"), {
+            taskId: data.task_id,
+            email: user.primaryEmailAddress.emailAddress,
+            filename: file.name,
+            createdAt: serverTimestamp()
+          });
+        } catch (fbErr) {
+          console.error("Failed to save to Firebase history:", fbErr);
+        }
+      }
+
       pollProgress(data.task_id);
     } catch (err: any) {
       setError(err.message || "An error occurred");
@@ -410,7 +427,22 @@ function HomeContent() {
                     <ShieldCheck className="w-8 h-8 text-emerald-400" />
                   </div>
                   <h3 className="text-3xl font-bold text-white mb-2">Extraction Complete!</h3>
-                  <p className="text-gray-400 text-md">Your stems have been successfully separated.</p>
+                  <p className="text-gray-400 text-md mb-4">Your stems have been successfully separated.</p>
+                  
+                  <div className="flex items-center justify-center gap-2 bg-[#1a1a1a] border border-[#27272a] rounded-xl px-4 py-3 w-max mx-auto">
+                    <span className="text-gray-500 text-sm font-bold uppercase tracking-wider">Task ID:</span>
+                    <span className="text-white font-mono text-sm tracking-wider">{taskId}</span>
+                    <button 
+                      onClick={() => {
+                        if(taskId) navigator.clipboard.writeText(taskId);
+                        alert("Task ID copied to clipboard!");
+                      }}
+                      className="ml-2 text-gray-400 hover:text-[#1877F2] transition-colors p-1"
+                      title="Copy ID to Clipboard"
+                    >
+                      <Copy className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
                 
                 <div className="bg-[#111] border border-[#27272a] rounded-2xl p-6 mb-8 w-full max-w-xl mx-auto">

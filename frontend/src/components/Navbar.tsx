@@ -71,6 +71,10 @@ export default function Navbar() {
             )}
             {isLoaded && isSignedIn && (
               <>
+                <Link href="/history" className="flex items-center gap-2 text-sm font-medium text-gray-300 hover:text-white transition-colors mr-2">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  History
+                </Link>
                 <UserButton 
                   appearance={{
                     elements: {
