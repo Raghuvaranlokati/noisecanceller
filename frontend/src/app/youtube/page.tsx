@@ -1,16 +1,14 @@
 "use client";
-import { useState, useEffect, Suspense } from "react";
+import { useState, Suspense } from "react";
 import { useUser } from "@clerk/nextjs";
-import { Search, Download, Video, Settings2, ShieldCheck, Copy, Lock } from 'lucide-react';
-import QueueWaitingRoom from "../../components/QueueWaitingRoom";
+import { Search, Download, Video, Settings2, ShieldCheck, Lock } from 'lucide-react';
 
 function YoutubeContent() {
   const [url, setUrl] = useState("");
   const [format, setFormat] = useState("mp3");
   const [loading, setLoading] = useState(false);
-  const [progress, setProgress] = useState({ step: "", percent: 0, message: "", start_time: 0, eta_seconds: 0, completed_time: 0, queue_position: 0, status: "" });
+  const [progress, setProgress] = useState({ step: "", percent: 0, message: "", status: "" });
   const [resultPath, setResultPath] = useState<string | null>(null);
-  const [taskId, setTaskId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   
   const { user, isLoaded, isSignedIn } = useUser();
@@ -29,7 +27,7 @@ function YoutubeContent() {
     setLoading(true);
     setError(null);
     setResultPath(null);
-    setProgress({ step: "Connecting...", percent: 5, message: "Sending to server...", start_time: 0, eta_seconds: 0, completed_time: 0, queue_position: 0, status: "queued" });
+    setProgress({ step: "Downloading...", percent: 50, message: "Server is downloading and converting...", status: "processing" });
 
     const formData = new FormData();
     formData.append("url", url);
@@ -46,46 +44,17 @@ function YoutubeContent() {
         throw new Error("Failed to process YouTube request");
       }
 
-      const data = await res.json();
-      setTaskId(data.task_id);
-      pollProgress(data.task_id);
+      // Instead of parsing JSON, we now receive the raw audio file directly
+      const blob = await res.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      
+      setResultPath(downloadUrl);
+      setLoading(false);
+      setProgress({ step: "Complete", percent: 100, message: "Ready to download!", status: "completed" });
     } catch (err: any) {
       setError(err.message || "An error occurred");
       setLoading(false);
     }
-  };
-
-  const pollProgress = async (id: string) => {
-    const interval = setInterval(async () => {
-      try {
-        const res = await fetch(`${baseUrl}/api/status/${id}`);
-        const data = await res.json();
-
-        if (data.status === "processing" || data.status === "pending" || data.status === "queued") {
-          setProgress({
-            step: data.step || (data.status === "queued" ? "Queued" : "Processing..."),
-            percent: data.progress || 5,
-            message: data.message || "Working...",
-            start_time: data.start_time || 0,
-            eta_seconds: data.eta_seconds || 0,
-            completed_time: data.completed_time || 0,
-            queue_position: data.queue_position || 0,
-            status: data.status
-          });
-        } else if (data.status === "completed") {
-          clearInterval(interval);
-          setResultPath(data.result_path || true);
-          setLoading(false);
-          setProgress({ step: "Complete", percent: 100, message: "Ready to download!", start_time: 0, eta_seconds: 0, completed_time: 0, queue_position: 0, status: "completed" });
-        } else if (data.status === "failed") {
-          clearInterval(interval);
-          setError(data.message || "Extraction failed");
-          setLoading(false);
-        }
-      } catch (err) {
-        console.error("Polling error:", err);
-      }
-    }, 2000);
   };
 
   return (
@@ -141,10 +110,6 @@ function YoutubeContent() {
 
           {/* RIGHT SIDE: MAIN INPUT */}
           <div className="lg:col-span-8 bg-[#111] border border-[#27272a] rounded-3xl p-6 md:p-12 shadow-2xl relative z-10 flex flex-col min-h-[500px]">
-            
-            {progress.status === "queued" ? (
-              <QueueWaitingRoom position={progress.queue_position} etaSeconds={progress.eta_seconds} />
-            ) : null}
 
             {/* Error Message */}
             {error && <div className="mt-6 p-6 bg-red-900/30 border border-red-500 text-red-200 rounded-2xl text-center font-medium absolute top-4 left-4 right-4">{error}</div>}
@@ -210,7 +175,7 @@ function YoutubeContent() {
             )}
 
             {/* Success State */}
-            {resultPath && taskId && (
+            {resultPath && (
               <div className="bg-[#050505] border border-[#27272a] rounded-3xl p-8 md:p-12 h-full flex flex-col justify-center text-center">
                 <div className="w-16 h-16 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
                   <ShieldCheck className="w-8 h-8 text-emerald-400" />
@@ -219,9 +184,8 @@ function YoutubeContent() {
                 <p className="text-gray-400 text-md mb-8">Your audio file is ready to download.</p>
                 
                 <a 
-                  href={`${baseUrl}/api/download/${taskId}`} 
-                  target="_blank" 
-                  rel="noreferrer"
+                  href={resultPath} 
+                  download={`youtube_audio.${format}`}
                   className="inline-flex items-center gap-3 py-4 px-8 bg-red-600 text-white rounded-full text-lg font-bold hover:bg-red-500 hover:-translate-y-1 shadow-[0_10px_30px_-10px_rgba(220,38,38,0.5)] transition-all mx-auto"
                 >
                   <Download className="w-5 h-5" /> Download {format.toUpperCase()}
