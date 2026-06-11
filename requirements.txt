@@ -3,7 +3,7 @@ torch==2.3.1+cpu
 torchvision==0.18.1+cpu
 torchaudio==2.3.1+cpu
 numpy<1.24,>=1.23.5
-tensorflow==2.13.1
+tensorflow==2.15.0
 fastapi
 uvicorn
 pydantic
@@ -11,7 +11,7 @@ python-multipart
 demucs
 torchcodec
 soundfile
-basic-pitch
+basic-pitch==0.3.0
 faster-whisper
 audio-separator[cpu]
 pyannote.audio
