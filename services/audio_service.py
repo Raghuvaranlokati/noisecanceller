@@ -20,64 +20,71 @@ def process_chunk(chunk_path: Path, dest_dir: Path, isolate_vocals: bool, isolat
     generated_files = []
     
     if enhance_speech:
-        try:
-            client = Client("hshr/DeepFilterNet2")
-            result = client.predict(
-                str(chunk_path),
-                "None",
-                "0",
-                str(chunk_path),
-                api_name="/denoise"
-            )
-            enhanced_audio_path = result[2]
-            dest_path = dest_dir / f"enhanced_part_{chunk_idx:03d}.wav"
-            shutil.copy(enhanced_audio_path, str(dest_path))
-            generated_files.append(dest_path)
-        except Exception as e:
-            raise RuntimeError(f"DeepFilterNet API Error on chunk {chunk_idx}: {e}")
+        client = Client("hshr/DeepFilterNet2", hf_token=os.environ.get("HF_TOKEN"))
+        for attempt in range(4):
+            try:
+                result = client.predict(
+                    str(chunk_path),
+                    "None",
+                    "0",
+                    str(chunk_path),
+                    api_name="/denoise"
+                )
+                enhanced_audio_path = result[2]
+                dest_path = dest_dir / f"enhanced_part_{chunk_idx:03d}.wav"
+                shutil.copy(enhanced_audio_path, str(dest_path))
+                generated_files.append(dest_path)
+                break
+            except Exception as e:
+                if attempt < 3:
+                    time.sleep(10)
+                else:
+                    raise RuntimeError(f"DeepFilterNet API Error on chunk {chunk_idx}: {e}")
 
     if isolate_vocals or isolate_instrumental or four_stem:
-        try:
-            client = Client("nakas/demucs_playground")
-            result = client.predict(
-                str(chunk_path),
-                api_name="/predict"
-            )
-            
-            # result[0] = Vocals, result[1] = Bass, result[2] = Drums, result[3] = Other
-            if isolate_vocals:
-                vocals_path = result[0]
-                dest_path = dest_dir / f"vocals_part_{chunk_idx:03d}.wav"
-                shutil.copy(vocals_path, str(dest_path))
-                generated_files.append(dest_path)
+        client = Client("nakas/demucs_playground", hf_token=os.environ.get("HF_TOKEN"))
+        for attempt in range(4):
+            try:
+                result = client.predict(
+                    str(chunk_path),
+                    api_name="/predict"
+                )
                 
-            if isolate_instrumental and not four_stem:
-                inst_path = result[3]
-                dest_path = dest_dir / f"instrumental_part_{chunk_idx:03d}.wav"
-                shutil.copy(inst_path, str(dest_path))
-                generated_files.append(dest_path)
+                # result[0] = Vocals, result[1] = Bass, result[2] = Drums, result[3] = Other
+                if isolate_vocals:
+                    vocals_path = result[0]
+                    dest_path = dest_dir / f"vocals_part_{chunk_idx:03d}.wav"
+                    shutil.copy(vocals_path, str(dest_path))
+                    if dest_path not in generated_files: generated_files.append(dest_path)
+                    
+                if isolate_instrumental and not four_stem:
+                    inst_path = result[3]
+                    dest_path = dest_dir / f"instrumental_part_{chunk_idx:03d}.wav"
+                    shutil.copy(inst_path, str(dest_path))
+                    if dest_path not in generated_files: generated_files.append(dest_path)
+                    
+                if four_stem:
+                    bass_path = result[1]
+                    dest_path_bass = dest_dir / f"bass_part_{chunk_idx:03d}.wav"
+                    shutil.copy(bass_path, str(dest_path_bass))
+                    if dest_path_bass not in generated_files: generated_files.append(dest_path_bass)
+                    
+                    drums_path = result[2]
+                    dest_path_drums = dest_dir / f"drums_part_{chunk_idx:03d}.wav"
+                    shutil.copy(drums_path, str(dest_path_drums))
+                    if dest_path_drums not in generated_files: generated_files.append(dest_path_drums)
+                    
+                    other_path = result[3]
+                    dest_path_other = dest_dir / f"instrumental_part_{chunk_idx:03d}.wav"
+                    shutil.copy(other_path, str(dest_path_other))
+                    if dest_path_other not in generated_files: generated_files.append(dest_path_other)
                 
-            if four_stem:
-                # Bass
-                bass_path = result[1]
-                dest_path = dest_dir / f"bass_part_{chunk_idx:03d}.wav"
-                shutil.copy(bass_path, str(dest_path))
-                generated_files.append(dest_path)
-                
-                # Drums
-                drums_path = result[2]
-                dest_path = dest_dir / f"drums_part_{chunk_idx:03d}.wav"
-                shutil.copy(drums_path, str(dest_path))
-                generated_files.append(dest_path)
-                
-                # Other (Instrumental)
-                other_path = result[3]
-                dest_path = dest_dir / f"instrumental_part_{chunk_idx:03d}.wav"
-                shutil.copy(other_path, str(dest_path))
-                generated_files.append(dest_path)
-                
-        except Exception as e:
-            raise RuntimeError(f"Demucs API Error on chunk {chunk_idx}: {e}")
+                break # Success! Break the retry loop
+            except Exception as e:
+                if attempt < 3:
+                    time.sleep(10)
+                else:
+                    raise RuntimeError(f"Demucs API Error on chunk {chunk_idx}: {e}")
             
     return generated_files
 
@@ -149,11 +156,14 @@ def process_audio_file(
         processed_chunks_dir.mkdir(exist_ok=True)
         
         if isolate_vocals or isolate_instrumental or four_stem or enhance_speech:
-            progress_callback(50, f"Processing {len(raw_chunk_paths)} chunks in parallel (Cloud GPU)...", step="3/4")
+            progress_callback(50, f"Processing {len(raw_chunk_paths)} chunks sequentially (Cloud GPU)...", step="3/4", 
+                              chunks_total=len(raw_chunk_paths), chunks_completed=0, chunks_pending=len(raw_chunk_paths))
             
-            # Limit to 5 concurrent workers to respect API rate limits from a single IP address
-            max_workers = min(5, len(raw_chunk_paths))
+            # Limit to 1 worker to strictly respect Hugging Face API rate limits
+            max_workers = 1
             completed = 0
+            
+            start_processing_time = time.time()
             
             with ThreadPoolExecutor(max_workers=max_workers) as executor:
                 future_to_chunk = {
@@ -166,8 +176,18 @@ def process_audio_file(
                     try:
                         generated = future.result()
                         completed += 1
+                        
+                        elapsed = time.time() - start_processing_time
+                        avg_time_per_chunk = elapsed / completed
+                        eta_seconds = int((len(raw_chunk_paths) - completed) * avg_time_per_chunk)
+                        
                         progress_callback(50 + int((completed / len(raw_chunk_paths)) * 40), 
-                                       f"Processed {completed}/{len(raw_chunk_paths)} chunks...", step="3/4")
+                                       f"Processing chunk {completed} of {len(raw_chunk_paths)}...", 
+                                       step="3/4",
+                                       chunks_total=len(raw_chunk_paths),
+                                       chunks_completed=completed,
+                                       chunks_pending=len(raw_chunk_paths) - completed,
+                                       eta_seconds=eta_seconds)
                     except Exception as exc:
                         raise RuntimeError(f"Chunk {idx} generated an exception: {exc}")
                         

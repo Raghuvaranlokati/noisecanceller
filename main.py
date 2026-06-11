@@ -10,6 +10,9 @@ from fastapi.middleware.cors import CORSMiddleware
 import uuid
 import shutil
 import time
+import json
+import threading
+import queue
 
 from services.audio_service import process_audio_file
 
@@ -24,13 +27,58 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# In-memory status tracker (for a production app, use Redis/DB)
-tasks_status = {}
+DB_FILE = "tasks_db.json"
+
+def load_db():
+    if os.path.exists(DB_FILE):
+        with open(DB_FILE, "r") as f:
+            return json.load(f)
+    return {}
+
+tasks_status = load_db()
+
+def save_db():
+    with open(DB_FILE, "w") as f:
+        json.dump(tasks_status, f, indent=4)
+
+job_queue = queue.Queue()
+active_task_id = None
+
+def queue_worker():
+    global active_task_id
+    while True:
+        job = job_queue.get()
+        if job is None:
+            break
+        
+        task_id, file_path, isolate_vocals, isolate_instrumental, four_stem, enhance_speech, user_email = job
+        active_task_id = task_id
+        
+        tasks_status[task_id]["status"] = "processing"
+        tasks_status[task_id]["start_time"] = time.time()
+        save_db()
+        
+        run_audio_processing(task_id, file_path, isolate_vocals, isolate_instrumental, four_stem, enhance_speech, user_email)
+        
+        active_task_id = None
+        job_queue.task_done()
+
+# Start global worker thread
+worker_thread = threading.Thread(target=queue_worker, daemon=True)
+worker_thread.start()
+
+def send_simulated_email(email: str, task_id: str):
+    print("\n" + "="*50)
+    print(f"📧 SIMULATED EMAIL SENT TO: {email}")
+    print(f"Subject: Your audio extraction is complete!")
+    print(f"Task ID: {task_id}")
+    print(f"You can now return to the website and enter this ID in the top navbar to download your stems.")
+    print("="*50 + "\n")
 
 @app.post("/api/process")
 async def start_processing(
-    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
+    email: str = Form(""),
     isolate_vocals: str = Form("false"),
     isolate_instrumental: str = Form("false"),
     four_stem: str = Form("false"),
@@ -47,40 +95,36 @@ async def start_processing(
         shutil.copyfileobj(file.file, buffer)
         
     tasks_status[task_id] = {
-        "status": "pending",
+        "status": "queued",
         "progress": 0,
-        "message": "File received. Initializing...",
+        "message": "Placed in queue...",
         "result_path": None,
         "step": "1/4",
-        "start_time": time.time(),
+        "start_time": None,
         "video_title": file.filename,
-        "video_length": 0
+        "video_length": 0,
+        "user_email": email
     }
+    save_db()
     
     isolate_vocals_bool = isolate_vocals.lower() == "true"
     isolate_instrumental_bool = isolate_instrumental.lower() == "true"
     four_stem_bool = four_stem.lower() == "true"
     enhance_speech_bool = enhance_speech.lower() == "true"
     
-    background_tasks.add_task(
-        run_audio_processing, 
-        task_id, 
-        file_path, 
-        isolate_vocals_bool, 
-        isolate_instrumental_bool,
-        four_stem_bool,
-        enhance_speech_bool
-    )
+    # Send to background worker queue instead of BackgroundTasks
+    job_queue.put((task_id, file_path, isolate_vocals_bool, isolate_instrumental_bool, four_stem_bool, enhance_speech_bool, email))
     
     return {"task_id": task_id}
 
-def run_audio_processing(task_id: str, file_path: str, isolate_vocals: bool, isolate_instrumental: bool, four_stem: bool, enhance_speech: bool):
+def run_audio_processing(task_id: str, file_path: str, isolate_vocals: bool, isolate_instrumental: bool, four_stem: bool, enhance_speech: bool, user_email: str):
     try:
         def progress_callback(progress_percent, message, **kwargs):
             tasks_status[task_id]["progress"] = progress_percent
             tasks_status[task_id]["message"] = message
             for key, value in kwargs.items():
                 tasks_status[task_id][key] = value
+            save_db()
             
         zip_path = process_audio_file(
             file_path, 
@@ -96,6 +140,12 @@ def run_audio_processing(task_id: str, file_path: str, isolate_vocals: bool, iso
         tasks_status[task_id]["progress"] = 100
         tasks_status[task_id]["message"] = "Processing complete! Ready to download."
         tasks_status[task_id]["result_path"] = zip_path
+        tasks_status[task_id]["completed_time"] = time.time()
+        save_db()
+        
+        if user_email:
+            send_simulated_email(user_email, task_id)
+            
     except Exception as e:
         tasks_status[task_id]["status"] = "failed"
         tasks_status[task_id]["message"] = str(e)
@@ -105,7 +155,23 @@ def run_audio_processing(task_id: str, file_path: str, isolate_vocals: bool, iso
 async def get_status(task_id: str):
     if task_id not in tasks_status:
         raise HTTPException(status_code=404, detail="Task not found")
-    return tasks_status[task_id]
+        
+    status_data = tasks_status[task_id].copy()
+    
+    if status_data["status"] == "queued":
+        # Calculate queue position
+        pos = 1
+        for job in list(job_queue.queue):
+            if job[0] == task_id:
+                break
+            pos += 1
+        
+        # If there is currently an active task, we are essentially at pos + 1 from the perspective of tasks running.
+        # But for users, "Queue Position: 1" means you are next. 
+        status_data["queue_position"] = pos
+        status_data["message"] = f"Waiting in queue... Position: {pos}"
+        
+    return status_data
 
 @app.get("/api/download/{task_id}")
 async def download_result(task_id: str):
