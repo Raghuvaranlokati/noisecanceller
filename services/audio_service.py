@@ -39,7 +39,7 @@ def process_audio_file(
     
     try:
         # Step 1: Convert audio to standard WAV format
-        progress_callback(10, "Converting audio to standard format...", step="1/3")
+        progress_callback(10, "Normalizing audio formats...")
         downloaded_audio_path = task_dir / "converted.wav"
         
         try:
@@ -56,7 +56,7 @@ def process_audio_file(
         
         # Step 2: Native Demucs Separation
         if isolate_vocals or isolate_instrumental or four_stem:
-            progress_callback(30, "Isolating stems natively (this guarantees NO rate limits, please wait 3-5 mins)...", step="2/3")
+            progress_callback(30, "Analyzing audio and isolating core stems (takes a few minutes)...")
             demucs_out = task_dir / "demucs_out"
             
             cmd = ["python", "-m", "demucs.separate", "-n", "htdemucs", str(downloaded_audio_path), "-o", str(demucs_out)]
@@ -91,7 +91,7 @@ def process_audio_file(
         
         # Step 3: Enhance Speech (Optional)
         if enhance_speech:
-            progress_callback(70, "Enhancing speech quality (Native DeepFilterNet3)...", step="2/3")
+            progress_callback(70, "Enhancing vocal clarity using Studio Denoise AI...")
             from df.enhance import enhance, init_df, load_audio, save_audio
             
             target_for_enhance = final_dir / "vocals.wav"
@@ -111,7 +111,7 @@ def process_audio_file(
                 
         # Step 4: AI De-Reverb (Optional)
         if de_reverb and (final_dir / "vocals.wav").exists():
-            progress_callback(75, "Running AI De-Reverb...", step="2/3")
+            progress_callback(75, "Removing room echo using AI De-Reverb...")
             sep = Separator()
             # UVR-DeEcho-DeReverb is the standard model, but might take a minute to download on first run
             sep.load_model(model_filename='UVR-DeEcho-DeReverb.pth')
@@ -123,7 +123,7 @@ def process_audio_file(
 
         # Step 5: Whisper Lyric Sync (Optional)
         if lyric_sync and (final_dir / "vocals.wav").exists():
-            progress_callback(80, "Transcribing lyrics...", step="2/3")
+            progress_callback(80, "Transcribing vocals and generating synced lyrics...")
             # Use tiny model for speed on CPU
             model = WhisperModel("tiny", device="cpu", compute_type="int8")
             segments, info = model.transcribe(str(final_dir / "vocals.wav"), word_timestamps=False)
@@ -144,7 +144,7 @@ def process_audio_file(
 
         # Step 6: Stem-to-MIDI (Optional)
         if stem_to_midi:
-            progress_callback(85, "Converting to MIDI...", step="2/3")
+            progress_callback(85, "Transcribing instrumentals into MIDI notation...")
             if (final_dir / "bass.wav").exists():
                 predict_and_save(
                     [str(final_dir / "bass.wav")],
@@ -168,7 +168,7 @@ def process_audio_file(
             target_audio_for_separation = final_dir / "original.wav"
             
         if separate_speakers and target_audio_for_separation:
-            progress_callback(88, "Detecting different speakers...", step="2/3")
+            progress_callback(88, "Diarizing audio and separating individual speakers...")
             hf_token = os.environ.get("HF_TOKEN")
             if not hf_token:
                 raise Exception("HF_TOKEN not found in environment. Pyannote requires it.")
@@ -205,7 +205,7 @@ def process_audio_file(
                 audio.export(str(final_dir / f"{speaker}.wav"), format="wav")
 
         # Step 8: Zip the results
-        progress_callback(90, "Zipping stems...", step="3/3")
+        progress_callback(90, "Finalizing and packaging your stems...")
         zip_path = WORK_DIR / f"vocals_{task_id}.zip"
         
         with zipfile.ZipFile(str(zip_path), 'w', zipfile.ZIP_DEFLATED) as zipf:

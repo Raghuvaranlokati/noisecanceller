@@ -4,13 +4,20 @@ import { useUser } from "@clerk/nextjs";
 import { db } from "../../lib/firebase";
 import { collection, query, where, getDocs, deleteDoc, doc } from "firebase/firestore";
 import Link from "next/link";
-import { History, ExternalLink, SearchX, Lock, CheckCircle2, XCircle, Loader2 } from "lucide-react";
+import { History, ExternalLink, SearchX, Lock, CheckCircle2, XCircle, Loader2, Copy, Check } from "lucide-react";
 
 const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
 
 function TaskStatusRow({ item, onDelete }: { item: any, onDelete: (id: string) => void }) {
   const [status, setStatus] = useState<string>("loading"); // loading, processing, completed, failed
   const [progressText, setProgressText] = useState<string>("Checking status...");
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(item.taskId);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -36,7 +43,7 @@ function TaskStatusRow({ item, onDelete }: { item: any, onDelete: (id: string) =
           clearInterval(interval);
         } else {
           setStatus("processing");
-          setProgressText(`${data.progress || 0}% - ${data.step || "Working..."}`);
+          setProgressText(`${data.progress || 0}% - ${data.message || "Working..."}`);
         }
       } catch (err) {
         // network issue, keep checking
@@ -56,9 +63,16 @@ function TaskStatusRow({ item, onDelete }: { item: any, onDelete: (id: string) =
           {item.filename || "Unknown Audio"}
         </h3>
         <div className="flex items-center gap-4 text-sm text-gray-400">
-          <span className="bg-[#1a1a1a] px-2 py-1 rounded text-xs font-mono border border-[#27272a]">
-            ID: {item.taskId.split("-")[0]}
-          </span>
+          <div className="flex items-center bg-[#1a1a1a] px-2 py-1 rounded text-xs font-mono border border-[#27272a]">
+            <span>ID: {item.taskId.split("-")[0]}</span>
+            <button 
+              onClick={handleCopy}
+              className="ml-2 hover:text-white transition-colors flex items-center"
+              title="Copy full Task ID"
+            >
+              {copied ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+            </button>
+          </div>
           {item.createdAt && (
             <span>{new Date(item.createdAt.toMillis()).toLocaleDateString()}</span>
           )}
@@ -83,7 +97,7 @@ function TaskStatusRow({ item, onDelete }: { item: any, onDelete: (id: string) =
         </div>
 
         <Link 
-          href={`/?taskId=${item.taskId}`}
+          href={`/studio/${item.taskId}`}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold transition-all ${
             status === 'processing' 
               ? 'bg-[#1877F2]/10 text-[#1877F2] hover:bg-[#1877F2]/20 border border-[#1877F2]/30'
@@ -92,10 +106,10 @@ function TaskStatusRow({ item, onDelete }: { item: any, onDelete: (id: string) =
                 : 'bg-gray-800 text-gray-400 cursor-not-allowed opacity-50'
           }`}
           onClick={(e) => {
-            if (status !== 'completed' && status !== 'processing') e.preventDefault();
+            if (status !== 'completed') e.preventDefault();
           }}
         >
-          {status === 'processing' ? 'View Live Progress' : 'Open Result'} <ExternalLink className="w-4 h-4" />
+          {status === 'processing' ? 'Processing...' : 'Open Studio'} <ExternalLink className="w-4 h-4" />
         </Link>
       </div>
     </div>
