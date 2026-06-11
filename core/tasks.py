@@ -2,13 +2,7 @@ import time
 from core.state import tasks_status, save_db
 from services.audio_service import process_audio_file
 
-def send_simulated_email(email: str, task_id: str):
-    print("\n" + "="*50)
-    print(f"📧 SIMULATED EMAIL SENT TO: {email}")
-    print(f"Subject: Your extraction is complete!")
-    print(f"Task ID: {task_id}")
-    print(f"You can now return to the website and enter this ID in the top navbar to download your stems.")
-    print("="*50 + "\n")
+from services.email_service import send_completed_email
 
 def run_audio_processing(task_id: str, file_path: str, isolate_vocals: bool, isolate_instrumental: bool, four_stem: bool, enhance_speech: bool, stem_to_midi: bool, de_reverb: bool, lyric_sync: bool, separate_speakers: bool, user_email: str):
     try:
@@ -41,7 +35,7 @@ def run_audio_processing(task_id: str, file_path: str, isolate_vocals: bool, iso
         save_db()
         
         if user_email:
-            send_simulated_email(user_email, task_id)
+            send_completed_email(user_email, task_id)
             
     except Exception as e:
         tasks_status[task_id]["status"] = "failed"

@@ -55,4 +55,8 @@ async def start_processing(
         )
     })
     
+    from services.email_service import send_queued_email
+    if email:
+        send_queued_email(email, task_id)
+        
     return {"task_id": task_id}
