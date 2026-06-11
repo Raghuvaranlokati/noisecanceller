@@ -2,9 +2,10 @@
 import { useState, useEffect, Suspense } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useSearchParams } from "next/navigation";
-import { UploadCloud, Music, AudioLines, Settings2, ShieldCheck, Zap, Lock, Sliders, Activity, Mic2, Search, LogOut, History, Copy, Check } from 'lucide-react';
+import { UploadCloud, Music, AudioLines, Settings2, ShieldCheck, Zap, Lock, Sliders, Activity, Mic2, Search, LogOut, History, Copy, Check, FileMusic, AlignLeft } from 'lucide-react';
 import { db } from "../lib/firebase";
 import { collection, addDoc, getDocs, query, where, deleteDoc, doc, serverTimestamp, orderBy } from "firebase/firestore";
+import ExtractionFlowDiagram from "../components/ExtractionFlowDiagram";
 
 function HomeContent() {
   const [file, setFile] = useState<File | null>(null);
@@ -241,32 +242,44 @@ function HomeContent() {
             <hr className="border-[#27272a] my-8" />
 
             {/* Pro / Coming Soon Tools */}
+            {/* Pro / Coming Soon Tools */}
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Advanced / Pro</h2>
-              <span className="text-[10px] bg-[#1877F2]/20 text-[#1877F2] px-2 py-0.5 rounded font-bold">Coming Soon</span>
+              <h2 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Advanced / Pro Features</h2>
             </div>
             
-            <div className="space-y-3 opacity-50">
-              <div className="w-full flex items-center justify-between p-3 rounded-xl bg-[#050505] border border-[#27272a] cursor-not-allowed">
+            <div className="space-y-3">
+              <div className="w-full flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-[#111] to-[#1a1a1a] border border-[#27272a] shadow-md relative overflow-hidden group">
+                <div className="absolute top-0 left-0 w-1 h-full bg-yellow-500"></div>
                 <div className="flex items-center gap-3">
-                  <Sliders className="w-5 h-5 text-gray-500" />
-                  <span className="font-medium text-gray-400">Mastering & EQ</span>
+                  <FileMusic className="w-5 h-5 text-yellow-500" />
+                  <div className="flex flex-col">
+                    <span className="font-bold text-gray-200">Stem-to-MIDI <span className="ml-2 text-[9px] bg-yellow-500/20 text-yellow-500 px-2 py-0.5 rounded font-bold uppercase">Pro</span></span>
+                    <span className="text-[10px] text-gray-500">Convert Bass/Melody directly to .midi</span>
+                  </div>
                 </div>
                 <Lock className="w-4 h-4 text-gray-600" />
               </div>
 
-              <div className="w-full flex items-center justify-between p-3 rounded-xl bg-[#050505] border border-[#27272a] cursor-not-allowed">
+              <div className="w-full flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-[#111] to-[#1a1a1a] border border-[#27272a] shadow-md relative overflow-hidden group">
+                <div className="absolute top-0 left-0 w-1 h-full bg-cyan-500"></div>
                 <div className="flex items-center gap-3">
-                  <Activity className="w-5 h-5 text-gray-500" />
-                  <span className="font-medium text-gray-400">BPM & Key Detection</span>
+                  <Mic2 className="w-5 h-5 text-cyan-500" />
+                  <div className="flex flex-col">
+                    <span className="font-bold text-gray-200">AI De-Reverb <span className="ml-2 text-[9px] bg-cyan-500/20 text-cyan-500 px-2 py-0.5 rounded font-bold uppercase">Pro</span></span>
+                    <span className="text-[10px] text-gray-500">Extract completely dry studio vocals</span>
+                  </div>
                 </div>
                 <Lock className="w-4 h-4 text-gray-600" />
               </div>
 
-              <div className="w-full flex items-center justify-between p-3 rounded-xl bg-[#050505] border border-[#27272a] cursor-not-allowed">
+              <div className="w-full flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-[#111] to-[#1a1a1a] border border-[#27272a] shadow-md relative overflow-hidden group">
+                <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500"></div>
                 <div className="flex items-center gap-3">
-                  <Mic2 className="w-5 h-5 text-gray-500" />
-                  <span className="font-medium text-gray-400">Vocal Pitch Shift</span>
+                  <AlignLeft className="w-5 h-5 text-emerald-500" />
+                  <div className="flex flex-col">
+                    <span className="font-bold text-gray-200">Whisper Lyric Sync <span className="ml-2 text-[9px] bg-emerald-500/20 text-emerald-500 px-2 py-0.5 rounded font-bold uppercase">Pro</span></span>
+                    <span className="text-[10px] text-gray-500">Auto-generate .srt subtitle files</span>
+                  </div>
                 </div>
                 <Lock className="w-4 h-4 text-gray-600" />
               </div>
@@ -281,34 +294,7 @@ function HomeContent() {
           <div className="lg:col-span-8 bg-[#111] border border-[#27272a] rounded-3xl p-6 md:p-12 shadow-2xl relative z-10 flex flex-col min-h-[700px]">
             
             {/* MAIN FLOW DIAGRAM (ALWAYS VISIBLE) */}
-            <div className="mb-10 w-full max-w-lg mx-auto relative h-56 flex-shrink-0">
-              {/* SVG Connecting Lines */}
-              <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 0 }}>
-                <line x1="50%" y1="50%" x2="25%" y2="25%" stroke="#52525b" strokeWidth="2" strokeDasharray="6 6" />
-                <line x1="50%" y1="50%" x2="75%" y2="25%" stroke="#52525b" strokeWidth="2" strokeDasharray="6 6" />
-                <line x1="50%" y1="50%" x2="50%" y2="80%" stroke="#52525b" strokeWidth="2" strokeDasharray="6 6" />
-              </svg>
-              
-              {/* Top Left Node */}
-              <div className={`absolute top-4 left-4 w-32 h-16 border-2 rounded-xl flex items-center justify-center z-10 transition-all duration-500 ${loading && progress.step.includes("1/") ? 'bg-cyan-500/20 border-cyan-500 shadow-[0_0_20px_rgba(6,182,212,0.6)] scale-110' : 'bg-[#0a0a0a] border-[#27272a]'}`}>
-                <span className={`text-sm font-bold ${loading && progress.step.includes("1/") ? 'text-cyan-400' : 'text-gray-500'}`}>Extracting</span>
-              </div>
-              
-              {/* Top Right Node */}
-              <div className={`absolute top-4 right-4 w-32 h-16 border-2 rounded-xl flex items-center justify-center z-10 transition-all duration-500 ${loading && progress.step.includes("2/") ? 'bg-emerald-500/20 border-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.6)] scale-110' : 'bg-[#0a0a0a] border-[#27272a]'}`}>
-                <span className={`text-sm font-bold ${loading && progress.step.includes("2/") ? 'text-emerald-400' : 'text-gray-500'}`}>Splitting</span>
-              </div>
-              
-              {/* Bottom Node */}
-              <div className={`absolute bottom-0 left-1/2 -translate-x-1/2 w-32 h-16 border-2 rounded-xl flex items-center justify-center z-10 transition-all duration-500 ${(loading && progress.step.includes("4/")) || resultZip ? 'bg-red-500/20 border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.6)] scale-110' : 'bg-[#0a0a0a] border-[#27272a]'}`}>
-                <span className={`text-sm font-bold ${(loading && progress.step.includes("4/")) || resultZip ? 'text-red-400' : 'text-gray-500'}`}>Merging</span>
-              </div>
-              
-              {/* Center Node */}
-              <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-28 h-28 border-[3px] rounded-full flex flex-col items-center justify-center z-10 transition-all duration-500 ${loading && progress.step.includes("3/") ? 'bg-purple-500/20 border-purple-500 shadow-[0_0_40px_rgba(168,85,247,0.8)] scale-110 animate-pulse' : 'bg-[#0f0f11] border-[#27272a]'}`}>
-                <span className={`text-[11px] font-bold tracking-widest ${loading && progress.step.includes("3/") ? 'text-purple-300' : 'text-gray-600'}`}>CLOUD GPU</span>
-              </div>
-            </div>
+            <ExtractionFlowDiagram isProcessing={loading} progress={progress.percent} />
             
             {/* Dynamic Content Area */}
             <div className="flex-1 flex flex-col justify-center relative">
