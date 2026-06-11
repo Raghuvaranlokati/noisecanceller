@@ -91,83 +91,71 @@ def process_audio_file(
         # Step 3: Enhance Speech (Optional)
         if enhance_speech:
             progress_callback(70, "Enhancing speech quality (Native DeepFilterNet3)...", step="2/3")
-            try:
-                from df.enhance import enhance, init_df, load_audio, save_audio
+            from df.enhance import enhance, init_df, load_audio, save_audio
+            
+            target_for_enhance = final_dir / "vocals.wav"
+            if not target_for_enhance.exists():
+                target_for_enhance = downloaded_audio_path
                 
-                target_for_enhance = final_dir / "vocals.wav"
-                if not target_for_enhance.exists():
-                    target_for_enhance = downloaded_audio_path
-                    
-                model, df_state, _ = init_df()  # Load default DeepFilterNet3 model
-                audio, _ = load_audio(str(target_for_enhance), sr=df_state.sr())
-                enhanced = enhance(model, df_state, audio)
-                
-                out_path = final_dir / "enhanced.wav"
-                save_audio(str(out_path), enhanced, df_state.sr())
-                
-                # Replace the vocals file with the enhanced version if it exists
-                if target_for_enhance.name == "vocals.wav":
-                    shutil.copy(str(out_path), str(final_dir / "vocals.wav"))
-            except Exception as e:
-                print(f"Warning: Enhance speech failed: {e}")
+            model, df_state, _ = init_df()  # Load default DeepFilterNet3 model
+            audio, _ = load_audio(str(target_for_enhance), sr=df_state.sr())
+            enhanced = enhance(model, df_state, audio)
+            
+            out_path = final_dir / "enhanced.wav"
+            save_audio(str(out_path), enhanced, df_state.sr())
+            
+            # Replace the vocals file with the enhanced version if it exists
+            if target_for_enhance.name == "vocals.wav":
+                shutil.copy(str(out_path), str(final_dir / "vocals.wav"))
                 
         # Step 4: AI De-Reverb (Optional)
         if de_reverb and (final_dir / "vocals.wav").exists():
             progress_callback(75, "Running AI De-Reverb...", step="2/3")
-            try:
-                sep = Separator()
-                # UVR-DeEcho-DeReverb is the standard model, but might take a minute to download on first run
-                sep.load_model(model_filename='UVR-DeEcho-DeReverb.pth')
-                # Returns a list of strings [vocals_no_reverb.wav, reverb_only.wav]
-                out_files = sep.separate(str(final_dir / "vocals.wav"))
-                # Assuming out_files[0] is the dry vocal, let's copy it over the original
-                if len(out_files) > 0:
-                    shutil.copy(out_files[0], str(final_dir / "vocals_dry.wav"))
-            except Exception as e:
-                print(f"Warning: De-Reverb failed: {e}")
+            sep = Separator()
+            # UVR-DeEcho-DeReverb is the standard model, but might take a minute to download on first run
+            sep.load_model(model_filename='UVR-DeEcho-DeReverb.pth')
+            # Returns a list of strings [vocals_no_reverb.wav, reverb_only.wav]
+            out_files = sep.separate(str(final_dir / "vocals.wav"))
+            # Assuming out_files[0] is the dry vocal, let's copy it over the original
+            if len(out_files) > 0:
+                shutil.copy(out_files[0], str(final_dir / "vocals_dry.wav"))
 
         # Step 5: Whisper Lyric Sync (Optional)
         if lyric_sync and (final_dir / "vocals.wav").exists():
             progress_callback(80, "Transcribing lyrics...", step="2/3")
-            try:
-                # Use tiny model for speed on CPU
-                model = WhisperModel("tiny", device="cpu", compute_type="int8")
-                segments, info = model.transcribe(str(final_dir / "vocals.wav"), word_timestamps=False)
-                
-                srt_path = final_dir / "lyrics.srt"
-                with open(srt_path, "w", encoding="utf-8") as f:
-                    for i, segment in enumerate(segments, start=1):
-                        def format_time(seconds):
-                            hours = int(seconds // 3600)
-                            minutes = int((seconds % 3600) // 60)
-                            secs = int(seconds % 60)
-                            millis = int((seconds - int(seconds)) * 1000)
-                            return f"{hours:02d}:{minutes:02d}:{secs:02d},{millis:03d}"
-                        
-                        f.write(f"{i}\n")
-                        f.write(f"{format_time(segment.start)} --> {format_time(segment.end)}\n")
-                        f.write(f"{segment.text.strip()}\n\n")
-            except Exception as e:
-                print(f"Warning: Lyric sync failed: {e}")
+            # Use tiny model for speed on CPU
+            model = WhisperModel("tiny", device="cpu", compute_type="int8")
+            segments, info = model.transcribe(str(final_dir / "vocals.wav"), word_timestamps=False)
+            
+            srt_path = final_dir / "lyrics.srt"
+            with open(srt_path, "w", encoding="utf-8") as f:
+                for i, segment in enumerate(segments, start=1):
+                    def format_time(seconds):
+                        hours = int(seconds // 3600)
+                        minutes = int((seconds % 3600) // 60)
+                        secs = int(seconds % 60)
+                        millis = int((seconds - int(seconds)) * 1000)
+                        return f"{hours:02d}:{minutes:02d}:{secs:02d},{millis:03d}"
+                    
+                    f.write(f"{i}\n")
+                    f.write(f"{format_time(segment.start)} --> {format_time(segment.end)}\n")
+                    f.write(f"{segment.text.strip()}\n\n")
 
         # Step 6: Stem-to-MIDI (Optional)
         if stem_to_midi:
             progress_callback(85, "Converting to MIDI...", step="2/3")
-            try:
-                if (final_dir / "bass.wav").exists():
-                    predict_and_save(
-                        [str(final_dir / "bass.wav")],
-                        str(final_dir),
-                        True, False, False, False # save_midi=True
-                    )
-                if (final_dir / "instrumental.wav").exists():
-                    predict_and_save(
-                        [str(final_dir / "instrumental.wav")],
-                        str(final_dir),
-                        True, False, False, False
-                    )
-            except Exception as e:
-                print(f"Warning: Stem-to-MIDI failed: {e}")
+            if (final_dir / "bass.wav").exists():
+                predict_and_save(
+                    [str(final_dir / "bass.wav")],
+                    str(final_dir),
+                    True, False, False, False # save_midi=True
+                )
+            if (final_dir / "instrumental.wav").exists():
+                predict_and_save(
+                    [str(final_dir / "instrumental.wav")],
+                    str(final_dir),
+                    True, False, False, False
+                )
                 
         # Step 7: Separate Speakers (Optional)
         target_audio_for_separation = None
@@ -178,44 +166,40 @@ def process_audio_file(
             
         if separate_speakers and target_audio_for_separation:
             progress_callback(88, "Detecting different speakers...", step="2/3")
-            try:
-                hf_token = os.environ.get("HF_TOKEN")
-                if not hf_token:
-                    raise Exception("HF_TOKEN not found in environment. Pyannote requires it.")
-                    
-                pipeline = Pipeline.from_pretrained(
-                    "pyannote/speaker-diarization-3.1",
-                    use_auth_token=hf_token
-                )
+            hf_token = os.environ.get("HF_TOKEN")
+            if not hf_token:
+                raise Exception("HF_TOKEN not found in environment. Pyannote requires it.")
                 
-                # Use CPU for now to prevent VRAM crashes, or GPU if available
-                device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-                pipeline.to(device)
+            pipeline = Pipeline.from_pretrained(
+                "pyannote/speaker-diarization-3.1",
+                use_auth_token=hf_token
+            )
+            
+            # Use CPU for now to prevent VRAM crashes, or GPU if available
+            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            pipeline.to(device)
 
-                audio_path_str = str(target_audio_for_separation)
-                diarization = pipeline(audio_path_str)
+            audio_path_str = str(target_audio_for_separation)
+            diarization = pipeline(audio_path_str)
+            
+            full_audio = AudioSegment.from_wav(audio_path_str)
+            speaker_segments = {}
+            
+            # Group segments by speaker
+            for turn, _, speaker in diarization.itertracks(yield_label=True):
+                start_ms = int(turn.start * 1000)
+                end_ms = int(turn.end * 1000)
+                segment = full_audio[start_ms:end_ms]
                 
-                full_audio = AudioSegment.from_wav(audio_path_str)
-                speaker_segments = {}
-                
-                # Group segments by speaker
-                for turn, _, speaker in diarization.itertracks(yield_label=True):
-                    start_ms = int(turn.start * 1000)
-                    end_ms = int(turn.end * 1000)
-                    segment = full_audio[start_ms:end_ms]
+                if speaker not in speaker_segments:
+                    speaker_segments[speaker] = segment
+                else:
+                    speaker_segments[speaker] += segment
                     
-                    if speaker not in speaker_segments:
-                        speaker_segments[speaker] = segment
-                    else:
-                        speaker_segments[speaker] += segment
-                        
-                # Export distinct speaker files
-                for speaker, audio in speaker_segments.items():
-                    # Exporting as e.g., SPEAKER_00.wav, SPEAKER_01.wav
-                    audio.export(str(final_dir / f"{speaker}.wav"), format="wav")
-                    
-            except Exception as e:
-                print(f"Warning: Speaker Separation failed: {e}")
+            # Export distinct speaker files
+            for speaker, audio in speaker_segments.items():
+                # Exporting as e.g., SPEAKER_00.wav, SPEAKER_01.wav
+                audio.export(str(final_dir / f"{speaker}.wav"), format="wav")
 
         # Step 8: Zip the results
         progress_callback(90, "Zipping stems...", step="3/3")
