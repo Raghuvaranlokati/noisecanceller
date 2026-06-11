@@ -51,14 +51,14 @@ def queue_worker():
         if job is None:
             break
         
-        task_id, file_path, isolate_vocals, isolate_instrumental, four_stem, enhance_speech, user_email = job
+        task_id, file_path, isolate_vocals, isolate_instrumental, four_stem, enhance_speech, stem_to_midi, de_reverb, lyric_sync, user_email = job
         active_task_id = task_id
         
         tasks_status[task_id]["status"] = "processing"
         tasks_status[task_id]["start_time"] = time.time()
         save_db()
         
-        run_audio_processing(task_id, file_path, isolate_vocals, isolate_instrumental, four_stem, enhance_speech, user_email)
+        run_audio_processing(task_id, file_path, isolate_vocals, isolate_instrumental, four_stem, enhance_speech, stem_to_midi, de_reverb, lyric_sync, user_email)
         
         active_task_id = None
         job_queue.task_done()
@@ -82,7 +82,10 @@ async def start_processing(
     isolate_vocals: str = Form("false"),
     isolate_instrumental: str = Form("false"),
     four_stem: str = Form("false"),
-    enhance_speech: str = Form("false")
+    enhance_speech: str = Form("false"),
+    stem_to_midi: str = Form("false"),
+    de_reverb: str = Form("false"),
+    lyric_sync: str = Form("false")
 ):
     if not file:
         raise HTTPException(status_code=400, detail="File is required")
@@ -98,12 +101,8 @@ async def start_processing(
         "status": "queued",
         "progress": 0,
         "message": "Placed in queue...",
-        "result_path": None,
-        "step": "1/4",
         "start_time": None,
-        "video_title": file.filename,
-        "video_length": 0,
-        "user_email": email
+        "filename": file.filename
     }
     save_db()
     
@@ -111,13 +110,16 @@ async def start_processing(
     isolate_instrumental_bool = isolate_instrumental.lower() == "true"
     four_stem_bool = four_stem.lower() == "true"
     enhance_speech_bool = enhance_speech.lower() == "true"
+    stem_to_midi_bool = stem_to_midi.lower() == "true"
+    de_reverb_bool = de_reverb.lower() == "true"
+    lyric_sync_bool = lyric_sync.lower() == "true"
     
-    # Send to background worker queue instead of BackgroundTasks
-    job_queue.put((task_id, file_path, isolate_vocals_bool, isolate_instrumental_bool, four_stem_bool, enhance_speech_bool, email))
+    # Send to background worker queue
+    job_queue.put((task_id, file_path, isolate_vocals_bool, isolate_instrumental_bool, four_stem_bool, enhance_speech_bool, stem_to_midi_bool, de_reverb_bool, lyric_sync_bool, email))
     
     return {"task_id": task_id}
 
-def run_audio_processing(task_id: str, file_path: str, isolate_vocals: bool, isolate_instrumental: bool, four_stem: bool, enhance_speech: bool, user_email: str):
+def run_audio_processing(task_id: str, file_path: str, isolate_vocals: bool, isolate_instrumental: bool, four_stem: bool, enhance_speech: bool, stem_to_midi: bool, de_reverb: bool, lyric_sync: bool, user_email: str):
     try:
         def progress_callback(progress_percent, message, **kwargs):
             tasks_status[task_id]["progress"] = progress_percent
@@ -133,7 +135,10 @@ def run_audio_processing(task_id: str, file_path: str, isolate_vocals: bool, iso
             isolate_vocals=isolate_vocals,
             isolate_instrumental=isolate_instrumental,
             four_stem=four_stem,
-            enhance_speech=enhance_speech
+            enhance_speech=enhance_speech,
+            stem_to_midi=stem_to_midi,
+            de_reverb=de_reverb,
+            lyric_sync=lyric_sync
         )
         
         tasks_status[task_id]["status"] = "completed"

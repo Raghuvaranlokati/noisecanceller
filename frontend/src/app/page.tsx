@@ -40,6 +40,9 @@ function HomeContent() {
   // Feature Toggles
   const [fourStem, setFourStem] = useState<boolean>(false);
   const [enhance, setEnhance] = useState<boolean>(false);
+  const [stemToMidi, setStemToMidi] = useState<boolean>(false);
+  const [deReverb, setDeReverb] = useState<boolean>(false);
+  const [lyricSync, setLyricSync] = useState<boolean>(false);
   
   // Download Customization Options
   const [dlFormat, setDlFormat] = useState<string>("mp3");
@@ -89,6 +92,9 @@ function HomeContent() {
     formData.append("isolate_instrumental", "true");
     formData.append("four_stem", fourStem.toString());
     formData.append("enhance_speech", enhance.toString());
+    formData.append("stem_to_midi", stemToMidi.toString());
+    formData.append("de_reverb", deReverb.toString());
+    formData.append("lyric_sync", lyricSync.toString());
     formData.append("email", user?.primaryEmailAddress?.emailAddress || "");
 
     try {
@@ -248,41 +254,69 @@ function HomeContent() {
             </div>
             
             <div className="space-y-3">
-              <div className="w-full flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-[#111] to-[#1a1a1a] border border-[#27272a] shadow-md relative overflow-hidden group">
-                <div className="absolute top-0 left-0 w-1 h-full bg-yellow-500"></div>
+              <button 
+                onClick={() => setStemToMidi(!stemToMidi)}
+                className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all text-left relative overflow-hidden group ${
+                  stemToMidi 
+                    ? 'bg-yellow-500/10 border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.15)]' 
+                    : 'bg-[#050505] border-[#27272a] hover:border-gray-500'
+                }`}
+              >
+                <div className={`absolute top-0 left-0 w-1 h-full ${stemToMidi ? 'bg-yellow-500' : 'bg-transparent'}`}></div>
                 <div className="flex items-center gap-3">
-                  <FileMusic className="w-5 h-5 text-yellow-500" />
+                  <FileMusic className={`w-5 h-5 ${stemToMidi ? 'text-yellow-500' : 'text-gray-500'}`} />
                   <div className="flex flex-col">
-                    <span className="font-bold text-gray-200">Stem-to-MIDI <span className="ml-2 text-[9px] bg-yellow-500/20 text-yellow-500 px-2 py-0.5 rounded font-bold uppercase">Pro</span></span>
+                    <span className={`font-bold ${stemToMidi ? 'text-white' : 'text-gray-300'}`}>Stem-to-MIDI <span className="ml-2 text-[9px] bg-yellow-500/20 text-yellow-500 px-2 py-0.5 rounded font-bold uppercase">Pro</span></span>
                     <span className="text-[10px] text-gray-500">Convert Bass/Melody directly to .midi</span>
                   </div>
                 </div>
-                <Lock className="w-4 h-4 text-gray-600" />
-              </div>
+                {/* Custom Toggle Switch UI */}
+                <div className={`w-12 h-6 rounded-full p-1 transition-colors ${stemToMidi ? 'bg-yellow-500' : 'bg-[#27272a]'}`}>
+                  <div className={`w-4 h-4 bg-white rounded-full transition-transform ${stemToMidi ? 'translate-x-6' : 'translate-x-0'}`} />
+                </div>
+              </button>
 
-              <div className="w-full flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-[#111] to-[#1a1a1a] border border-[#27272a] shadow-md relative overflow-hidden group">
-                <div className="absolute top-0 left-0 w-1 h-full bg-cyan-500"></div>
+              <button 
+                onClick={() => setDeReverb(!deReverb)}
+                className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all text-left relative overflow-hidden group ${
+                  deReverb 
+                    ? 'bg-cyan-500/10 border-cyan-500 shadow-[0_0_15px_rgba(6,182,212,0.15)]' 
+                    : 'bg-[#050505] border-[#27272a] hover:border-gray-500'
+                }`}
+              >
+                <div className={`absolute top-0 left-0 w-1 h-full ${deReverb ? 'bg-cyan-500' : 'bg-transparent'}`}></div>
                 <div className="flex items-center gap-3">
-                  <Mic2 className="w-5 h-5 text-cyan-500" />
+                  <Mic2 className={`w-5 h-5 ${deReverb ? 'text-cyan-500' : 'text-gray-500'}`} />
                   <div className="flex flex-col">
-                    <span className="font-bold text-gray-200">AI De-Reverb <span className="ml-2 text-[9px] bg-cyan-500/20 text-cyan-500 px-2 py-0.5 rounded font-bold uppercase">Pro</span></span>
+                    <span className={`font-bold ${deReverb ? 'text-white' : 'text-gray-300'}`}>AI De-Reverb <span className="ml-2 text-[9px] bg-cyan-500/20 text-cyan-500 px-2 py-0.5 rounded font-bold uppercase">Pro</span></span>
                     <span className="text-[10px] text-gray-500">Extract completely dry studio vocals</span>
                   </div>
                 </div>
-                <Lock className="w-4 h-4 text-gray-600" />
-              </div>
+                <div className={`w-12 h-6 rounded-full p-1 transition-colors ${deReverb ? 'bg-cyan-500' : 'bg-[#27272a]'}`}>
+                  <div className={`w-4 h-4 bg-white rounded-full transition-transform ${deReverb ? 'translate-x-6' : 'translate-x-0'}`} />
+                </div>
+              </button>
 
-              <div className="w-full flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-[#111] to-[#1a1a1a] border border-[#27272a] shadow-md relative overflow-hidden group">
-                <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500"></div>
+              <button 
+                onClick={() => setLyricSync(!lyricSync)}
+                className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all text-left relative overflow-hidden group ${
+                  lyricSync 
+                    ? 'bg-emerald-500/10 border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.15)]' 
+                    : 'bg-[#050505] border-[#27272a] hover:border-gray-500'
+                }`}
+              >
+                <div className={`absolute top-0 left-0 w-1 h-full ${lyricSync ? 'bg-emerald-500' : 'bg-transparent'}`}></div>
                 <div className="flex items-center gap-3">
-                  <AlignLeft className="w-5 h-5 text-emerald-500" />
+                  <AlignLeft className={`w-5 h-5 ${lyricSync ? 'text-emerald-500' : 'text-gray-500'}`} />
                   <div className="flex flex-col">
-                    <span className="font-bold text-gray-200">Whisper Lyric Sync <span className="ml-2 text-[9px] bg-emerald-500/20 text-emerald-500 px-2 py-0.5 rounded font-bold uppercase">Pro</span></span>
+                    <span className={`font-bold ${lyricSync ? 'text-white' : 'text-gray-300'}`}>Whisper Lyric Sync <span className="ml-2 text-[9px] bg-emerald-500/20 text-emerald-500 px-2 py-0.5 rounded font-bold uppercase">Pro</span></span>
                     <span className="text-[10px] text-gray-500">Auto-generate .srt subtitle files</span>
                   </div>
                 </div>
-                <Lock className="w-4 h-4 text-gray-600" />
-              </div>
+                <div className={`w-12 h-6 rounded-full p-1 transition-colors ${lyricSync ? 'bg-emerald-500' : 'bg-[#27272a]'}`}>
+                  <div className={`w-4 h-4 bg-white rounded-full transition-transform ${lyricSync ? 'translate-x-6' : 'translate-x-0'}`} />
+                </div>
+              </button>
             </div>
             
             <div className="mt-auto pt-8">

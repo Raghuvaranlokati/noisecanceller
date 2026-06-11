@@ -7,3 +7,6 @@ python-multipart
 demucs
 torchcodec
 soundfile
+basic-pitch
+faster-whisper
+audio-separator[cpu]

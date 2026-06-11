@@ -6,6 +6,9 @@ import time
 from pathlib import Path
 from typing import Callable
 from gradio_client import Client
+from faster_whisper import WhisperModel
+from basic_pitch.inference import predict_and_save
+from audio_separator.separator import Separator
 
 # Base directory for all temporary files during processing
 WORK_DIR = Path("temp_workdir")
@@ -25,7 +28,10 @@ def process_audio_file(
     isolate_vocals: bool = False,
     isolate_instrumental: bool = False,
     four_stem: bool = False,
-    enhance_speech: bool = False
+    enhance_speech: bool = False,
+    stem_to_midi: bool = False,
+    de_reverb: bool = False,
+    lyric_sync: bool = False
 ) -> str:
     """
     1. Converts uploaded file to WAV format.
@@ -98,7 +104,65 @@ def process_audio_file(
             except Exception as e:
                 print(f"Warning: Enhance speech failed: {e}")
                 
-        # Step 4: Zip the results
+        # Step 4: AI De-Reverb (Optional)
+        if de_reverb and (final_dir / "vocals.wav").exists():
+            progress_callback(75, "Running AI De-Reverb...", step="2/3")
+            try:
+                sep = Separator()
+                # UVR-DeEcho-DeReverb is the standard model, but might take a minute to download on first run
+                sep.load_model(model_filename='UVR-DeEcho-DeReverb.pth')
+                # Returns a list of strings [vocals_no_reverb.wav, reverb_only.wav]
+                out_files = sep.separate(str(final_dir / "vocals.wav"))
+                # Assuming out_files[0] is the dry vocal, let's copy it over the original
+                if len(out_files) > 0:
+                    shutil.copy(out_files[0], str(final_dir / "vocals_dry.wav"))
+            except Exception as e:
+                print(f"Warning: De-Reverb failed: {e}")
+
+        # Step 5: Whisper Lyric Sync (Optional)
+        if lyric_sync and (final_dir / "vocals.wav").exists():
+            progress_callback(80, "Transcribing lyrics...", step="2/3")
+            try:
+                # Use tiny model for speed on CPU
+                model = WhisperModel("tiny", device="cpu", compute_type="int8")
+                segments, info = model.transcribe(str(final_dir / "vocals.wav"), word_timestamps=False)
+                
+                srt_path = final_dir / "lyrics.srt"
+                with open(srt_path, "w", encoding="utf-8") as f:
+                    for i, segment in enumerate(segments, start=1):
+                        def format_time(seconds):
+                            hours = int(seconds // 3600)
+                            minutes = int((seconds % 3600) // 60)
+                            secs = int(seconds % 60)
+                            millis = int((seconds - int(seconds)) * 1000)
+                            return f"{hours:02d}:{minutes:02d}:{secs:02d},{millis:03d}"
+                        
+                        f.write(f"{i}\n")
+                        f.write(f"{format_time(segment.start)} --> {format_time(segment.end)}\n")
+                        f.write(f"{segment.text.strip()}\n\n")
+            except Exception as e:
+                print(f"Warning: Lyric sync failed: {e}")
+
+        # Step 6: Stem-to-MIDI (Optional)
+        if stem_to_midi:
+            progress_callback(85, "Converting to MIDI...", step="2/3")
+            try:
+                if (final_dir / "bass.wav").exists():
+                    predict_and_save(
+                        [str(final_dir / "bass.wav")],
+                        str(final_dir),
+                        True, False, False, False # save_midi=True
+                    )
+                if (final_dir / "instrumental.wav").exists():
+                    predict_and_save(
+                        [str(final_dir / "instrumental.wav")],
+                        str(final_dir),
+                        True, False, False, False
+                    )
+            except Exception as e:
+                print(f"Warning: Stem-to-MIDI failed: {e}")
+                
+        # Step 7: Zip the results
         progress_callback(90, "Zipping stems...", step="3/3")
         zip_path = WORK_DIR / f"vocals_{task_id}.zip"
         
