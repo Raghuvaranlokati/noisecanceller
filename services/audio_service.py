@@ -5,7 +5,6 @@ import subprocess
 import time
 from pathlib import Path
 from typing import Callable
-from gradio_client import Client
 from faster_whisper import WhisperModel
 from basic_pitch.inference import predict_and_save
 from audio_separator.separator import Separator
@@ -15,14 +14,6 @@ import torch
 
 # Base directory for all temporary files during processing
 WORK_DIR = Path("temp_workdir")
-
-# Global dictionary to cache Gradio Clients and prevent rapid WebSocket connections/disconnections
-_CLIENTS = {}
-
-def get_client(model_id: str):
-    if model_id not in _CLIENTS:
-        _CLIENTS[model_id] = Client(model_id, hf_token=os.environ.get("HF_TOKEN"))
-    return _CLIENTS[model_id]
 
 def process_audio_file(
     file_path: str, 
