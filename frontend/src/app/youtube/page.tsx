@@ -201,7 +201,7 @@ function YoutubeContent() {
                 <div className="mt-2 h-3 bg-[#27272a] rounded-full overflow-hidden w-full max-w-md mx-auto">
                   <div 
                     className="h-full bg-gradient-to-r from-orange-500 to-red-500 relative transition-all duration-500" 
-                    style={{ width: \`\${progress.percent}%\` }}
+                    style={{ width: `${progress.percent}%` }}
                   >
                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent animate-shimmer" />
                   </div>
