@@ -15,7 +15,7 @@ export default function Footer() {
               <span className="font-bold text-white text-xl tracking-tight">Stemify AI</span>
             </Link>
             <p className="text-gray-400 text-sm leading-relaxed mb-6">
-              The world's most advanced AI stem separation tool. Extract vocals, drums, and instruments with studio-grade precision for free.
+              The world&apos;s most advanced AI stem separation tool. Extract vocals, drums, and instruments with studio-grade precision for free.
             </p>
             <div className="flex gap-4">
               <a href="#" className="text-gray-400 hover:text-[#1877F2] transition-colors"><Globe className="w-5 h-5" /></a>

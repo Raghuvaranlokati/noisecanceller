@@ -5,7 +5,7 @@ export default function ContactPage() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
       <div className="text-center mb-16">
         <h1 className="text-4xl md:text-5xl font-bold mb-6">Contact Us</h1>
-        <p className="text-xl text-gray-400">We'd love to hear from you. Please fill out this form.</p>
+        <p className="text-xl text-gray-400">We&apos;d love to hear from you. Please fill out this form.</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 max-w-5xl mx-auto">
@@ -32,7 +32,7 @@ export default function ContactPage() {
                 </div>
                 <div>
                   <h4 className="text-white font-semibold mb-1">Support</h4>
-                  <p className="text-gray-400 text-sm mb-1">We're here to help.</p>
+                  <p className="text-gray-400 text-sm mb-1">We&apos;re here to help.</p>
                   <a href="mailto:support@stemify.ai" className="text-[#1877F2] font-medium">support@stemify.ai</a>
                 </div>
               </div>

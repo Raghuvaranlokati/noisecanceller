@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useUser } from "@clerk/nextjs";
 import { db } from "../../lib/firebase";
 import { collection, query, where, getDocs, deleteDoc, doc, orderBy } from "firebase/firestore";
@@ -11,18 +11,7 @@ export default function HistoryPage() {
   const [history, setHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (isLoaded && !isSignedIn) {
-      setLoading(false);
-      return;
-    }
-
-    if (user?.primaryEmailAddress?.emailAddress) {
-      fetchHistory(user.primaryEmailAddress.emailAddress);
-    }
-  }, [user, isLoaded, isSignedIn]);
-
-  const fetchHistory = async (email: string) => {
+  const fetchHistory = useCallback(async (email: string) => {
     setLoading(true);
     try {
       const q = query(
@@ -67,7 +56,18 @@ export default function HistoryPage() {
       console.error("Error fetching history:", err);
     }
     setLoading(false);
-  };
+  }, []);
+
+  useEffect(() => {
+    if (isLoaded && !isSignedIn) {
+      setTimeout(() => setLoading(false), 0);
+      return;
+    }
+
+    if (user?.primaryEmailAddress?.emailAddress) {
+      fetchHistory(user.primaryEmailAddress.emailAddress);
+    }
+  }, [user, isLoaded, isSignedIn, fetchHistory]);
 
   if (loading) {
     return (
@@ -100,7 +100,7 @@ export default function HistoryPage() {
             <SearchX className="w-16 h-16 text-gray-600 mb-4" />
             <h3 className="text-xl font-bold text-white mb-2">No active history found</h3>
             <p className="text-gray-400 max-w-md">
-              You haven't extracted any files recently, or your previous extractions were automatically cleaned up from the temporary server storage.
+              You haven&apos;t extracted any files recently, or your previous extractions were automatically cleaned up from the temporary server storage.
             </p>
             <Link href="/" className="mt-6 bg-[#1877F2] text-white px-6 py-3 rounded-full font-bold hover:bg-[#166FE5] transition-colors">
               Extract a New File

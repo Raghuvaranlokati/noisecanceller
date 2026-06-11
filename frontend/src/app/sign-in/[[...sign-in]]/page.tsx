@@ -23,7 +23,7 @@ export default function SignInPage() {
           </div>
           <h1 className="text-4xl font-bold text-white mb-4">Welcome back to Stemify AI</h1>
           <p className="text-xl text-gray-400 leading-relaxed">
-            The world's most powerful AI vocal extractor and stem separation engine. Log in to continue splitting tracks.
+            The world&apos;s most powerful AI vocal extractor and stem separation engine. Log in to continue splitting tracks.
           </p>
         </div>
       </div>

@@ -46,7 +46,7 @@ export default function FAQPage() {
       <div className="mt-20 bg-gradient-to-br from-[#111] to-[#1a1a1a] border border-[#27272a] rounded-3xl p-10 text-center">
         <MessageSquare className="w-12 h-12 text-[#1877F2] mx-auto mb-6" />
         <h3 className="text-2xl font-bold mb-4">Still have questions?</h3>
-        <p className="text-gray-400 mb-8 max-w-2xl mx-auto">Can't find the answer you're looking for? Please chat to our friendly team.</p>
+        <p className="text-gray-400 mb-8 max-w-2xl mx-auto">Can&apos;t find the answer you&apos;re looking for? Please chat to our friendly team.</p>
         <a href="/contact" className="inline-flex items-center gap-2 bg-[#1877F2] text-white px-8 py-3 rounded-xl font-bold hover:bg-[#166FE5] transition-colors">
           <Mail className="w-5 h-5" /> Get in touch
         </a>

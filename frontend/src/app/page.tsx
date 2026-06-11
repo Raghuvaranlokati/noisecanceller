@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useSearchParams } from "next/navigation";
 import { UploadCloud, Music, AudioLines, Settings2, ShieldCheck, Zap, Lock, Sliders, Activity, Mic2, Search, LogOut, History, Copy, Check, FileMusic, AlignLeft, Users } from 'lucide-react';
@@ -23,19 +23,61 @@ function HomeContent() {
   const [loginInput, setLoginInput] = useState("");
   const [searchTaskId, setSearchTaskId] = useState("");
 
+  const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+
+  const pollProgress = useCallback(async (id: string) => {
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`${baseUrl}/api/status/${id}`);
+        const data = await res.json();
+
+        if (data.status === "processing" || data.status === "pending" || data.status === "queued") {
+          setProgress({
+            step: data.step || (data.status === "queued" ? "Queued" : "Processing..."),
+            percent: data.progress || 5,
+            message: data.message || "Working...",
+            chunks_total: data.chunks_total || 0,
+            chunks_completed: data.chunks_completed || 0,
+            chunks_pending: data.chunks_pending || 0,
+            start_time: data.start_time || 0,
+            eta_seconds: data.eta_seconds || 0,
+            completed_time: data.completed_time || 0,
+            queue_position: data.queue_position || 0,
+            status: data.status // Add status to state
+          } as any);
+        } else if (data.status === "completed") {
+          clearInterval(interval);
+          setResultZip(data.result_path || true);
+          setLoading(false);
+          setProgress({ step: "Complete", percent: 100, message: "Ready to download!", chunks_total: 0, chunks_completed: 0, chunks_pending: 0, start_time: 0, eta_seconds: 0, completed_time: 0, queue_position: 0 });
+        } else if (data.status === "failed") {
+          clearInterval(interval);
+          setError(data.message || data.error || "An unknown error occurred on the server.");
+          setLoading(false);
+        }
+      } catch (err) {
+        // Keep trying
+      }
+    }, 2000);
+  }, [baseUrl]);
+
   useEffect(() => {
     const queryTaskId = searchParams.get('taskId');
     if (queryTaskId && !taskId && !loading && !resultZip) {
-      setTaskId(queryTaskId);
-      setLoading(true);
-      setProgress({ step: "Looking up task...", percent: 10, message: "Connecting to server...", chunks_total: 0, chunks_completed: 0, chunks_pending: 0, start_time: 0, eta_seconds: 0, completed_time: 0, queue_position: 0 });
-      pollProgress(queryTaskId);
+      setTimeout(() => {
+        setTaskId(queryTaskId);
+        setLoading(true);
+        setProgress({ step: "Looking up task...", percent: 10, message: "Connecting to server...", chunks_total: 0, chunks_completed: 0, chunks_pending: 0, start_time: 0, eta_seconds: 0, completed_time: 0, queue_position: 0 });
+        pollProgress(queryTaskId);
+      }, 0);
     }
-  }, [searchParams, taskId, loading, resultZip]);
+  }, [searchParams, taskId, loading, resultZip, pollProgress]);
 
   useEffect(() => {
     const savedEmail = localStorage.getItem("user_email");
-    if (savedEmail) setUserEmail(savedEmail);
+    if (savedEmail) {
+      setTimeout(() => setUserEmail(savedEmail), 0);
+    }
   }, []);
   
   // Feature Toggles
@@ -56,8 +98,6 @@ function HomeContent() {
     drums: true,
     bass: true
   });
-
-  const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -134,41 +174,7 @@ function HomeContent() {
     }
   };
 
-  const pollProgress = async (id: string) => {
-    const interval = setInterval(async () => {
-      try {
-        const res = await fetch(`${baseUrl}/api/status/${id}`);
-        const data = await res.json();
-
-        if (data.status === "processing" || data.status === "pending" || data.status === "queued") {
-          setProgress({
-            step: data.step || (data.status === "queued" ? "Queued" : "Processing..."),
-            percent: data.progress || 5,
-            message: data.message || "Working...",
-            chunks_total: data.chunks_total || 0,
-            chunks_completed: data.chunks_completed || 0,
-            chunks_pending: data.chunks_pending || 0,
-            start_time: data.start_time || 0,
-            eta_seconds: data.eta_seconds || 0,
-            completed_time: data.completed_time || 0,
-            queue_position: data.queue_position || 0,
-            status: data.status // Add status to state
-          } as any);
-        } else if (data.status === "completed") {
-          clearInterval(interval);
-          setResultZip(data.result_path || true);
-          setLoading(false);
-          setProgress({ step: "Complete", percent: 100, message: "Ready to download!", chunks_total: 0, chunks_completed: 0, chunks_pending: 0, start_time: 0, eta_seconds: 0, completed_time: 0, queue_position: 0 });
-        } else if (data.status === "failed") {
-          clearInterval(interval);
-          setError(data.message || data.error || "An unknown error occurred on the server.");
-          setLoading(false);
-        }
-      } catch (err) {
-        // Keep trying
-      }
-    }, 2000);
-  };
+  // pollProgress moved to top to satisfy ESLint
 
   return (
     <div className="min-h-screen pb-20">
