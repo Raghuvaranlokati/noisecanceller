@@ -1,0 +1,18 @@
+{
+    "88eda6a6-84f1-4701-a5ef-b64b5beaa9d9": {
+        "status": "completed",
+        "progress": 100,
+        "message": "Processing complete! Ready to download.",
+        "result_path": "temp_workdir\\vocals_88eda6a6-84f1-4701-a5ef-b64b5beaa9d9.zip",
+        "step": "4/4",
+        "start_time": 1781124566.4250507,
+        "video_title": "[ruvs.in] - the Entry Went Wrong \ud83c\udfaf\ud83e\udd2f\ud83d\udd25.mp3",
+        "video_length": 0,
+        "user_email": "cybercheckerall@gmail.com",
+        "chunks_total": 1,
+        "chunks_completed": 1,
+        "chunks_pending": 0,
+        "eta_seconds": 0,
+        "completed_time": 1781124715.3670883
+    }
+}

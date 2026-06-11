@@ -4,7 +4,7 @@ import { useUser } from "@clerk/nextjs";
 import { db } from "../../lib/firebase";
 import { collection, query, where, getDocs, deleteDoc, doc, orderBy } from "firebase/firestore";
 import Link from "next/link";
-import { History, Trash2, ExternalLink, ShieldCheck, SearchX } from "lucide-react";
+import { History, Trash2, ExternalLink, ShieldCheck, SearchX, Lock } from "lucide-react";
 
 export default function HistoryPage() {
   const { user, isLoaded, isSignedIn } = useUser();
