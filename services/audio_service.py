@@ -90,12 +90,24 @@ def process_audio_file(
         
         # Step 3: Enhance Speech (Optional)
         if enhance_speech:
-            progress_callback(70, "Enhancing speech quality (API)...", step="2/3")
+            progress_callback(70, "Enhancing speech quality (Native DeepFilterNet3)...", step="2/3")
             try:
-                client = get_client("hshr/DeepFilterNet2")
-                # process the full file at once if possible, it might timeout, but we only have 1 call so we shouldn't get 429
-                result = client.predict(str(downloaded_audio_path), "None", "0", str(downloaded_audio_path), api_name="/denoise")
-                shutil.copy(result[2], str(final_dir / "enhanced.wav"))
+                from df.enhance import enhance, init_df, load_audio, save_audio
+                
+                target_for_enhance = final_dir / "vocals.wav"
+                if not target_for_enhance.exists():
+                    target_for_enhance = downloaded_audio_path
+                    
+                model, df_state, _ = init_df()  # Load default DeepFilterNet3 model
+                audio, _ = load_audio(str(target_for_enhance), sr=df_state.sr())
+                enhanced = enhance(model, df_state, audio)
+                
+                out_path = final_dir / "enhanced.wav"
+                save_audio(str(out_path), enhanced, df_state.sr())
+                
+                # Replace the vocals file with the enhanced version if it exists
+                if target_for_enhance.name == "vocals.wav":
+                    shutil.copy(str(out_path), str(final_dir / "vocals.wav"))
             except Exception as e:
                 print(f"Warning: Enhance speech failed: {e}")
                 

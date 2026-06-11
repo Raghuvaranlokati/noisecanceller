@@ -1,7 +1,8 @@
 --find-links https://download.pytorch.org/whl/torch_stable.html
-torch==2.2.0+cpu
-torchvision==0.17.0+cpu
-torchaudio==2.2.0+cpu
+torch
+torchvision
+torchaudio
+numpy>=1.26.4
 fastapi
 uvicorn
 pydantic
@@ -16,3 +17,4 @@ pyannote.audio
 pydub
 
 ml-dtypes>=0.4.0
+deepfilternet

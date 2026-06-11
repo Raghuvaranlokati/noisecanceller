@@ -2,9 +2,105 @@
 import { useEffect, useState, useCallback } from "react";
 import { useUser } from "@clerk/nextjs";
 import { db } from "../../lib/firebase";
-import { collection, query, where, getDocs, deleteDoc, doc, orderBy } from "firebase/firestore";
+import { collection, query, where, getDocs, deleteDoc, doc } from "firebase/firestore";
 import Link from "next/link";
-import { History, Trash2, ExternalLink, ShieldCheck, SearchX, Lock } from "lucide-react";
+import { History, ExternalLink, SearchX, Lock, CheckCircle2, XCircle, Loader2 } from "lucide-react";
+
+const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+
+function TaskStatusRow({ item, onDelete }: { item: any, onDelete: (id: string) => void }) {
+  const [status, setStatus] = useState<string>("loading"); // loading, processing, completed, failed
+  const [progressText, setProgressText] = useState<string>("Checking status...");
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+
+    const checkStatus = async () => {
+      try {
+        const res = await fetch(`${baseUrl}/api/status/${item.taskId}`);
+        if (res.status === 404) {
+          // Task expired/deleted
+          onDelete(item.id);
+          return;
+        }
+        
+        const data = await res.json();
+        
+        if (data.status === "completed") {
+          setStatus("completed");
+          setProgressText("Extraction Finished");
+          clearInterval(interval);
+        } else if (data.status === "failed") {
+          setStatus("failed");
+          setProgressText("Processing Failed");
+          clearInterval(interval);
+        } else {
+          setStatus("processing");
+          setProgressText(`${data.progress || 0}% - ${data.step || "Working..."}`);
+        }
+      } catch (err) {
+        // network issue, keep checking
+      }
+    };
+
+    checkStatus();
+    interval = setInterval(checkStatus, 3000);
+
+    return () => clearInterval(interval);
+  }, [item.taskId, item.id, onDelete]);
+
+  return (
+    <div className="p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-white/5 transition-colors border-b border-[#27272a] last:border-0">
+      <div>
+        <h3 className="text-lg font-bold text-white truncate max-w-sm mb-2">
+          {item.filename || "Unknown Audio"}
+        </h3>
+        <div className="flex items-center gap-4 text-sm text-gray-400">
+          <span className="bg-[#1a1a1a] px-2 py-1 rounded text-xs font-mono border border-[#27272a]">
+            ID: {item.taskId.split("-")[0]}
+          </span>
+          {item.createdAt && (
+            <span>{new Date(item.createdAt.toMillis()).toLocaleDateString()}</span>
+          )}
+        </div>
+      </div>
+      
+      <div className="flex items-center gap-6">
+        {/* Animated Status Indicator */}
+        <div className="flex items-center gap-2 min-w-[140px]">
+          {status === "loading" && <Loader2 className="w-5 h-5 text-gray-500 animate-spin" />}
+          {status === "processing" && <Loader2 className="w-5 h-5 text-[#1877F2] animate-spin" />}
+          {status === "completed" && <CheckCircle2 className="w-5 h-5 text-emerald-500" />}
+          {status === "failed" && <XCircle className="w-5 h-5 text-red-500" />}
+          
+          <span className={`text-sm font-bold ${
+            status === 'completed' ? 'text-emerald-500' : 
+            status === 'failed' ? 'text-red-500' : 
+            status === 'processing' ? 'text-[#1877F2]' : 'text-gray-500'
+          }`}>
+            {progressText}
+          </span>
+        </div>
+
+        <Link 
+          href={`/?taskId=${item.taskId}`}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold transition-all ${
+            status === 'processing' 
+              ? 'bg-[#1877F2]/10 text-[#1877F2] hover:bg-[#1877F2]/20 border border-[#1877F2]/30'
+              : status === 'completed'
+                ? 'bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 border border-emerald-500/30'
+                : 'bg-gray-800 text-gray-400 cursor-not-allowed opacity-50'
+          }`}
+          onClick={(e) => {
+            if (status !== 'completed' && status !== 'processing') e.preventDefault();
+          }}
+        >
+          {status === 'processing' ? 'View Live Progress' : 'Open Result'} <ExternalLink className="w-4 h-4" />
+        </Link>
+      </div>
+    </div>
+  );
+}
 
 export default function HistoryPage() {
   const { user, isLoaded, isSignedIn } = useUser();
@@ -14,13 +110,7 @@ export default function HistoryPage() {
   const fetchHistory = useCallback(async (email: string) => {
     setLoading(true);
     try {
-      const q = query(
-        collection(db, "extractions"),
-        where("email", "==", email),
-        // Note: orderBy requires an index in Firestore if combined with where. 
-        // For simplicity, we'll sort client-side to avoid forcing the user to create a composite index immediately.
-      );
-      
+      const q = query(collection(db, "extractions"), where("email", "==", email));
       const querySnapshot = await getDocs(q);
       const docs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any[];
       
@@ -31,27 +121,7 @@ export default function HistoryPage() {
         return timeB - timeA;
       });
 
-      // Verification Step: Check if files still exist on the backend
-      const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
-      const validDocs = [];
-
-      for (const item of docs) {
-        try {
-          const res = await fetch(`${baseUrl}/api/status/${item.taskId}`);
-          if (res.status === 404) {
-            // Task has been deleted from temp storage! Delete from Firebase.
-            console.log(`Task ${item.taskId} no longer exists. Removing from history.`);
-            await deleteDoc(doc(db, "extractions", item.id));
-          } else {
-            validDocs.push(item);
-          }
-        } catch (e) {
-          // If network error, keep it for now
-          validDocs.push(item);
-        }
-      }
-
-      setHistory(validDocs);
+      setHistory(docs);
     } catch (err) {
       console.error("Error fetching history:", err);
     }
@@ -68,6 +138,11 @@ export default function HistoryPage() {
       fetchHistory(user.primaryEmailAddress.emailAddress);
     }
   }, [user, isLoaded, isSignedIn, fetchHistory]);
+
+  const handleDeleteTask = async (id: string) => {
+    await deleteDoc(doc(db, "extractions", id));
+    setHistory(prev => prev.filter(item => item.id !== id));
+  };
 
   if (loading) {
     return (
@@ -94,7 +169,7 @@ export default function HistoryPage() {
         <h1 className="text-3xl font-bold text-white">Your Extraction History</h1>
       </div>
 
-      <div className="bg-[#111] border border-[#27272a] rounded-2xl overflow-hidden">
+      <div className="bg-[#111] border border-[#27272a] rounded-2xl overflow-hidden shadow-2xl">
         {history.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
             <SearchX className="w-16 h-16 text-gray-600 mb-4" />
@@ -107,32 +182,9 @@ export default function HistoryPage() {
             </Link>
           </div>
         ) : (
-          <div className="divide-y divide-[#27272a]">
+          <div className="flex flex-col">
             {history.map((item) => (
-              <div key={item.id} className="p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-white/5 transition-colors">
-                <div>
-                  <h3 className="text-lg font-bold text-white truncate max-w-sm mb-1">
-                    {item.filename || "Unknown Audio"}
-                  </h3>
-                  <div className="flex items-center gap-4 text-sm text-gray-400">
-                    <span className="bg-[#1a1a1a] px-2 py-1 rounded text-xs font-mono">
-                      ID: {item.taskId.split("-")[0]}...
-                    </span>
-                    {item.createdAt && (
-                      <span>{new Date(item.createdAt.toMillis()).toLocaleDateString()}</span>
-                    )}
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-3">
-                  <Link 
-                    href={`/?taskId=${item.taskId}`}
-                    className="flex items-center gap-2 bg-[#1877F2]/10 text-[#1877F2] hover:bg-[#1877F2]/20 px-4 py-2 rounded-lg font-bold transition-colors"
-                  >
-                    <ExternalLink className="w-4 h-4" /> Open Result
-                  </Link>
-                </div>
-              </div>
+              <TaskStatusRow key={item.id} item={item} onDelete={handleDeleteTask} />
             ))}
           </div>
         )}
