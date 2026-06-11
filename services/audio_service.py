@@ -167,7 +167,13 @@ def process_audio_file(
                 print(f"Warning: Stem-to-MIDI failed: {e}")
                 
         # Step 7: Separate Speakers (Optional)
-        if separate_speakers and (final_dir / "vocals.wav").exists():
+        target_audio_for_separation = None
+        if (final_dir / "vocals.wav").exists():
+            target_audio_for_separation = final_dir / "vocals.wav"
+        elif (final_dir / "original.wav").exists():
+            target_audio_for_separation = final_dir / "original.wav"
+            
+        if separate_speakers and target_audio_for_separation:
             progress_callback(88, "Detecting different speakers...", step="2/3")
             try:
                 hf_token = os.environ.get("HF_TOKEN")
@@ -175,7 +181,7 @@ def process_audio_file(
                     raise Exception("HF_TOKEN not found in environment. Pyannote requires it.")
                     
                 pipeline = Pipeline.from_pretrained(
-                    "pyannote/speaker-diarization-community-1",
+                    "pyannote/speaker-diarization-3.1",
                     use_auth_token=hf_token
                 )
                 
@@ -183,10 +189,10 @@ def process_audio_file(
                 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
                 pipeline.to(device)
 
-                vocals_path = str(final_dir / "vocals.wav")
-                diarization = pipeline(vocals_path)
+                audio_path_str = str(target_audio_for_separation)
+                diarization = pipeline(audio_path_str)
                 
-                full_audio = AudioSegment.from_wav(vocals_path)
+                full_audio = AudioSegment.from_wav(audio_path_str)
                 speaker_segments = {}
                 
                 # Group segments by speaker
@@ -202,8 +208,8 @@ def process_audio_file(
                         
                 # Export distinct speaker files
                 for speaker, audio in speaker_segments.items():
-                    # Exporting as e.g., Speaker_0.wav, Speaker_1.wav
-                    audio.export(str(final_dir / f"Speaker_{speaker.split('_')[-1]}.wav"), format="wav")
+                    # Exporting as e.g., Speaker_00.wav, Speaker_01.wav
+                    audio.export(str(final_dir / f"{speaker}.wav"), format="wav")
                     
             except Exception as e:
                 print(f"Warning: Speaker Separation failed: {e}")
