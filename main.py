@@ -189,6 +189,8 @@ async def get_status(task_id: str):
         # If there is currently an active task, we are essentially at pos + 1 from the perspective of tasks running.
         # But for users, "Queue Position: 1" means you are next. 
         status_data["queue_position"] = pos
+        # Estimate 3 minutes (180 seconds) per job in queue, plus 3 minutes for the currently active job
+        status_data["eta_seconds"] = pos * 180 + (180 if active_task_id else 0)
         status_data["message"] = f"Waiting in queue... Position: {pos}"
         
     return status_data

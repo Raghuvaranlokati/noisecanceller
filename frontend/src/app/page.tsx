@@ -6,6 +6,7 @@ import { UploadCloud, Music, AudioLines, Settings2, ShieldCheck, Zap, Lock, Slid
 import { db } from "../lib/firebase";
 import { collection, addDoc, getDocs, query, where, deleteDoc, doc, serverTimestamp, orderBy } from "firebase/firestore";
 import ExtractionFlowDiagram from "../components/ExtractionFlowDiagram";
+import QueueWaitingRoom from "../components/QueueWaitingRoom";
 
 function HomeContent() {
   const [file, setFile] = useState<File | null>(null);
@@ -139,9 +140,9 @@ function HomeContent() {
         const res = await fetch(`${baseUrl}/api/status/${id}`);
         const data = await res.json();
 
-        if (data.status === "processing" || data.status === "pending") {
+        if (data.status === "processing" || data.status === "pending" || data.status === "queued") {
           setProgress({
-            step: data.step || "Processing...",
+            step: data.step || (data.status === "queued" ? "Queued" : "Processing..."),
             percent: data.progress || 5,
             message: data.message || "Working...",
             chunks_total: data.chunks_total || 0,
@@ -150,8 +151,9 @@ function HomeContent() {
             start_time: data.start_time || 0,
             eta_seconds: data.eta_seconds || 0,
             completed_time: data.completed_time || 0,
-            queue_position: data.queue_position || 0
-          });
+            queue_position: data.queue_position || 0,
+            status: data.status // Add status to state
+          } as any);
         } else if (data.status === "completed") {
           clearInterval(interval);
           setResultZip(data.result_path || true);
@@ -350,8 +352,12 @@ function HomeContent() {
           {/* RIGHT SIDE: FILE UPLOAD & RESULTS */}
           <div className="lg:col-span-8 bg-[#111] border border-[#27272a] rounded-3xl p-6 md:p-12 shadow-2xl relative z-10 flex flex-col min-h-[700px]">
             
-            {/* MAIN FLOW DIAGRAM (ALWAYS VISIBLE) */}
-            <ExtractionFlowDiagram isProcessing={loading} progress={progress.percent} />
+            {/* MAIN FLOW DIAGRAM OR QUEUE */}
+            {(progress as any).status === "queued" ? (
+              <QueueWaitingRoom position={progress.queue_position} etaSeconds={progress.eta_seconds} />
+            ) : (
+              <ExtractionFlowDiagram isProcessing={loading} progress={progress.percent} />
+            )}
             
             {/* Dynamic Content Area */}
             <div className="flex-1 flex flex-col justify-center relative">
@@ -403,7 +409,7 @@ function HomeContent() {
             {error && <div className="mt-6 p-6 bg-red-900/30 border border-red-500 text-red-200 rounded-2xl text-center font-medium absolute top-4 left-4 right-4">{error}</div>}
 
             {/* Loading State */}
-            {loading && (
+            {loading && (progress as any).status !== "queued" && (
               <div className="bg-[#050505] border border-[#27272a] rounded-3xl p-12 text-center h-full flex flex-col items-center justify-center">
                 <div className="inline-block animate-spin rounded-full h-16 w-16 border-t-4 border-[#1877F2] border-r-4 border-r-transparent border-b-4 border-b-[#1877F2]/30 border-l-4 border-l-transparent mb-8"></div>
                 
