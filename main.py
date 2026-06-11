@@ -15,6 +15,7 @@ import threading
 import queue
 
 from services.audio_service import process_audio_file
+from services.youtube_service import download_youtube_audio
 
 app = FastAPI()
 
@@ -51,14 +52,29 @@ def queue_worker():
         if job is None:
             break
         
-        task_id, file_path, isolate_vocals, isolate_instrumental, four_stem, enhance_speech, stem_to_midi, de_reverb, lyric_sync, separate_speakers, user_email = job
+        if isinstance(job, dict):
+            task_type = job.get("type")
+            task_id = job.get("task_id")
+        else:
+            # Legacy tuple fallback
+            task_type = "audio"
+            task_id = job[0]
+            
         active_task_id = task_id
         
         tasks_status[task_id]["status"] = "processing"
         tasks_status[task_id]["start_time"] = time.time()
         save_db()
         
-        run_audio_processing(task_id, file_path, isolate_vocals, isolate_instrumental, four_stem, enhance_speech, stem_to_midi, de_reverb, lyric_sync, separate_speakers, user_email)
+        if task_type == "audio":
+            if isinstance(job, tuple):
+                _, file_path, isolate_vocals, isolate_instrumental, four_stem, enhance_speech, stem_to_midi, de_reverb, lyric_sync, separate_speakers, user_email = job
+            else:
+                args = job.get("args")
+                file_path, isolate_vocals, isolate_instrumental, four_stem, enhance_speech, stem_to_midi, de_reverb, lyric_sync, separate_speakers, user_email = args
+            run_audio_processing(task_id, file_path, isolate_vocals, isolate_instrumental, four_stem, enhance_speech, stem_to_midi, de_reverb, lyric_sync, separate_speakers, user_email)
+        elif task_type == "youtube":
+            run_youtube_download(task_id, job.get("url"), job.get("format"), job.get("email"))
         
         active_task_id = None
         job_queue.task_done()
@@ -121,6 +137,37 @@ async def start_processing(
     
     return {"task_id": task_id}
 
+@app.post("/api/youtube")
+async def start_youtube_download(
+    url: str = Form(...),
+    format: str = Form("mp3"),
+    email: str = Form("")
+):
+    if not url:
+        raise HTTPException(status_code=400, detail="URL is required")
+        
+    task_id = str(uuid.uuid4())
+    
+    tasks_status[task_id] = {
+        "status": "queued",
+        "progress": 0,
+        "message": "Placed in queue...",
+        "start_time": None,
+        "filename": f"YouTube_{format.upper()}"
+    }
+    save_db()
+    
+    # Send dictionary-based job to the queue
+    job_queue.put({
+        "type": "youtube",
+        "task_id": task_id,
+        "url": url,
+        "format": format,
+        "email": email
+    })
+    
+    return {"task_id": task_id}
+
 def run_audio_processing(task_id: str, file_path: str, isolate_vocals: bool, isolate_instrumental: bool, four_stem: bool, enhance_speech: bool, stem_to_midi: bool, de_reverb: bool, lyric_sync: bool, separate_speakers: bool, user_email: str):
     try:
         def progress_callback(progress_percent, message, **kwargs):
@@ -158,6 +205,37 @@ def run_audio_processing(task_id: str, file_path: str, isolate_vocals: bool, iso
         tasks_status[task_id]["status"] = "failed"
         tasks_status[task_id]["message"] = str(e)
         print(f"Error processing {task_id}: {e}")
+
+def run_youtube_download(task_id: str, youtube_url: str, format_choice: str, user_email: str):
+    try:
+        def progress_callback(progress_percent, message, **kwargs):
+            tasks_status[task_id]["progress"] = progress_percent
+            tasks_status[task_id]["message"] = message
+            for key, value in kwargs.items():
+                tasks_status[task_id][key] = value
+            save_db()
+            
+        downloaded_file = download_youtube_audio(
+            youtube_url, 
+            format_choice, 
+            task_id, 
+            progress_callback
+        )
+        
+        tasks_status[task_id]["status"] = "completed"
+        tasks_status[task_id]["progress"] = 100
+        tasks_status[task_id]["message"] = "Download complete! Ready to save."
+        tasks_status[task_id]["result_path"] = downloaded_file
+        tasks_status[task_id]["completed_time"] = time.time()
+        save_db()
+        
+        if user_email:
+            send_simulated_email(user_email, task_id)
+            
+    except Exception as e:
+        tasks_status[task_id]["status"] = "failed"
+        tasks_status[task_id]["message"] = str(e)
+        print(f"Error processing youtube {task_id}: {e}")
 
 @app.get("/api/status/{task_id}")
 async def get_status(task_id: str):
