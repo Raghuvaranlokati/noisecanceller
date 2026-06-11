@@ -34,7 +34,36 @@ def queue_worker():
         state.active_task_id = None
         job_queue.task_done()
 
+def cleanup_worker():
+    """Background thread to delete temporary files older than 1 hour"""
+    import os
+    while True:
+        try:
+            now = time.time()
+            for directory in ["downloads", "results"]:
+                if not os.path.exists(directory):
+                    continue
+                for filename in os.listdir(directory):
+                    filepath = os.path.join(directory, filename)
+                    if os.path.isfile(filepath):
+                        # Delete if older than 1 hour (3600 seconds)
+                        if os.stat(filepath).st_mtime < now - 3600:
+                            try:
+                                os.remove(filepath)
+                                print(f"Cleaned up old file: {filepath}")
+                            except Exception as e:
+                                print(f"Failed to clean {filepath}: {e}")
+        except Exception as e:
+            print(f"Cleanup error: {e}")
+        
+        # Sleep for 15 minutes
+        time.sleep(900)
+
 def start_worker():
     worker_thread = threading.Thread(target=queue_worker, daemon=True)
     worker_thread.start()
+    
+    cleanup_thread = threading.Thread(target=cleanup_worker, daemon=True)
+    cleanup_thread.start()
+    
     return worker_thread
