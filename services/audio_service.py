@@ -118,7 +118,8 @@ def package_custom_download(
     task_id: str, 
     stems: list[str], 
     output_format: str = "wav", 
-    chunked: bool = False
+    chunked: bool = False,
+    folder_name: str = "custom_stems"
 ) -> str:
     """
     Packages a custom download based on the UI selections.
@@ -133,7 +134,10 @@ def package_custom_download(
     # Create a unique staging directory for this specific download configuration
     timestamp = int(time.time())
     staging_dir = task_dir / f"custom_pkg_{timestamp}"
-    staging_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Nest inside the custom folder name so the ZIP extracts cleanly into a single folder
+    base_dir = staging_dir / folder_name
+    base_dir.mkdir(parents=True, exist_ok=True)
     
     try:
         for stem in stems:
@@ -142,7 +146,7 @@ def package_custom_download(
                 continue
                 
             # Create subfolder for this stem e.g., "Vocals/"
-            stem_folder = staging_dir / stem.capitalize()
+            stem_folder = base_dir / stem.capitalize()
             stem_folder.mkdir(exist_ok=True)
             
             if chunked:

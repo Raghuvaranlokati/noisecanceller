@@ -41,6 +41,7 @@ function HomeContent() {
   // Download Customization Options
   const [dlFormat, setDlFormat] = useState<string>("mp3");
   const [dlChunked, setDlChunked] = useState<boolean>(true);
+  const [dlFolderName, setDlFolderName] = useState<string>("My_Song_Stems");
   const [dlStems, setDlStems] = useState<Record<string, boolean>>({
     vocals: true,
     instrumental: true,
@@ -490,6 +491,16 @@ function HomeContent() {
                         </select>
                       </div>
                       <div className="flex-1">
+                        <label className="block text-sm font-medium text-gray-400 mb-2">Zip / Folder Name</label>
+                        <input 
+                          type="text"
+                          value={dlFolderName}
+                          onChange={(e) => setDlFolderName(e.target.value)}
+                          placeholder="My_Song_Stems"
+                          className="w-full bg-[#1a1a1a] text-white border border-[#27272a] rounded-lg px-4 py-3 outline-none focus:border-[#1877F2]"
+                        />
+                      </div>
+                      <div className="flex-1">
                         <label className="block text-sm font-medium text-gray-400 mb-2">Delivery Structure</label>
                         <select 
                           value={dlChunked ? "chunked" : "single"} 
@@ -506,7 +517,7 @@ function HomeContent() {
 
                 <div className="flex justify-center flex-col items-center gap-4">
                   <a 
-                    href={`${baseUrl}/api/custom_download/${taskId}?stems=${Object.entries(dlStems).filter(([k,v]) => v).map(([k]) => k).join(',')}&format=${dlFormat}&chunked=${dlChunked}`} 
+                    href={`${baseUrl}/api/custom_download/${taskId}?stems=${Object.entries(dlStems).filter(([k,v]) => v).map(([k]) => k).join(',')}&format=${dlFormat}&chunked=${dlChunked}&folder_name=${encodeURIComponent(dlFolderName)}`} 
                     target="_blank" 
                     rel="noreferrer"
                     className="inline-flex items-center gap-3 py-4 px-8 bg-[#1877F2] text-white rounded-full text-lg font-bold hover:bg-[#166FE5] hover:-translate-y-1 shadow-[0_10px_30px_-10px_rgba(24,119,242,0.5)] transition-all"

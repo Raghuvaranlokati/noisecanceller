@@ -193,7 +193,8 @@ async def custom_download(
     task_id: str, 
     stems: str = "vocals", # comma separated
     format: str = "wav",
-    chunked: str = "false"
+    chunked: str = "false",
+    folder_name: str = "custom_stems"
 ):
     if task_id not in tasks_status:
         raise HTTPException(status_code=404, detail="Task not found")
@@ -205,18 +206,24 @@ async def custom_download(
     stems_list = [s.strip() for s in stems.split(",")]
     is_chunked = chunked.lower() == "true"
     
+    # Sanitize the folder name to prevent weird characters in the downloaded zip
+    safe_folder_name = "".join(c for c in folder_name if c.isalnum() or c in (" ", "_", "-")).strip()
+    if not safe_folder_name:
+        safe_folder_name = "stems"
+    
     from services.audio_service import package_custom_download
     try:
         zip_path = package_custom_download(
             task_id, 
             stems=stems_list, 
             output_format=format, 
-            chunked=is_chunked
+            chunked=is_chunked,
+            folder_name=safe_folder_name
         )
         return FileResponse(
             zip_path,
             media_type="application/zip",
-            filename=f"custom_stems_{task_id}.zip"
+            filename=f"{safe_folder_name}.zip"
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
