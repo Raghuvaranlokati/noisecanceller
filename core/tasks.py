@@ -4,7 +4,7 @@ from services.audio_service import process_audio_file
 
 from services.email_service import send_completed_email
 
-def run_audio_processing(task_id: str, file_path: str, isolate_vocals: bool, isolate_instrumental: bool, four_stem: bool, enhance_speech: bool, stem_to_midi: bool, de_reverb: bool, lyric_sync: bool, separate_speakers: bool, user_email: str):
+def run_audio_processing(task_id: str, file_path: str, isolate_vocals: bool, isolate_instrumental: bool, four_stem: bool, enhance_speech: bool, stem_to_midi: bool, de_reverb: bool, lyric_sync: bool, separate_speakers: bool, user_email: str, metadata_csv_path: str = None):
     try:
         def progress_callback(progress_percent, message, **kwargs):
             tasks_status[task_id]["progress"] = progress_percent
@@ -24,7 +24,8 @@ def run_audio_processing(task_id: str, file_path: str, isolate_vocals: bool, iso
             stem_to_midi=stem_to_midi,
             de_reverb=de_reverb,
             lyric_sync=lyric_sync,
-            separate_speakers=separate_speakers
+            separate_speakers=separate_speakers,
+            metadata_csv_path=metadata_csv_path
         )
         
         tasks_status[task_id]["status"] = "completed"

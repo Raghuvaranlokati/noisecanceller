@@ -17,7 +17,8 @@ async def start_processing(
     stem_to_midi: str = Form("false"),
     de_reverb: str = Form("false"),
     lyric_sync: str = Form("false"),
-    separate_speakers: str = Form("false")
+    separate_speakers: str = Form("false"),
+    metadata_csv: UploadFile = File(None)
 ):
     if not file:
         raise HTTPException(status_code=400, detail="File is required")
@@ -38,6 +39,12 @@ async def start_processing(
     }
     save_db()
     
+    metadata_csv_path = None
+    if metadata_csv and metadata_csv.filename:
+        metadata_csv_path = os.path.join("downloads", f"{task_id}_{metadata_csv.filename}")
+        with open(metadata_csv_path, "wb") as buffer:
+            shutil.copyfileobj(metadata_csv.file, buffer)
+    
     job_queue.put({
         "type": "audio",
         "task_id": task_id,
@@ -51,7 +58,8 @@ async def start_processing(
             de_reverb.lower() == "true", 
             lyric_sync.lower() == "true", 
             separate_speakers.lower() == "true", 
-            email
+            email,
+            metadata_csv_path
         )
     })
     

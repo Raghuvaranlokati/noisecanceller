@@ -27,7 +27,8 @@ def process_audio_file(
     stem_to_midi: bool = False,
     de_reverb: bool = False,
     lyric_sync: bool = False,
-    separate_speakers: bool = False
+    separate_speakers: bool = False,
+    metadata_csv_path: str = None
 ) -> str:
     """
     1. Converts uploaded file to WAV format.
@@ -204,7 +205,100 @@ def process_audio_file(
                 # Exporting as e.g., SPEAKER_00.wav, SPEAKER_01.wav
                 audio.export(str(final_dir / f"{speaker}.wav"), format="wav")
 
-        # Step 8: Zip the results
+        # Step 8.5: Metadata CSV Text Matching (Forced Alignment)
+        if metadata_csv_path and os.path.exists(metadata_csv_path):
+            progress_callback(89, "Aligning CSV text with audio using torchaudio (Forced Alignment)...")
+            import csv
+            import json
+            import torchaudio
+            import re
+            
+            transcript_words = []
+            with open(metadata_csv_path, 'r', encoding='utf-8') as f:
+                reader = csv.reader(f)
+                for row in reader:
+                    if row:
+                        text = " ".join(row).strip()
+                        if text:
+                            # Clean punctuation and convert to uppercase for Wav2Vec2
+                            clean_text = re.sub(r'[^\w\s]', '', text).upper()
+                            transcript_words.extend(clean_text.split())
+                            
+            if transcript_words:
+                target_audio = None
+                if (final_dir / "vocals.wav").exists():
+                    target_audio = final_dir / "vocals.wav"
+                elif (final_dir / "original.wav").exists():
+                    target_audio = final_dir / "original.wav"
+                    
+                if target_audio:
+                    try:
+                        bundle = torchaudio.pipelines.WAV2VEC2_ASR_BASE_960H
+                        model = bundle.get_model().to('cpu')
+                        labels = bundle.get_labels()
+                        dictionary = {c: i for i, c in enumerate(labels)}
+                        
+                        waveform, sample_rate = torchaudio.load(str(target_audio))
+                        if sample_rate != bundle.sample_rate:
+                            waveform = torchaudio.functional.resample(waveform, sample_rate, bundle.sample_rate)
+                            
+                        with torch.inference_mode():
+                            emissions, _ = model(waveform)
+                            
+                        # Format target sequence
+                        token_targets = []
+                        for word in transcript_words:
+                            tokens = [dictionary.get(c, 0) for c in word if c in dictionary]
+                            if tokens:
+                                token_targets.extend(tokens)
+                                token_targets.append(dictionary.get('|', 0)) # Word boundary
+                                
+                        targets = torch.tensor(token_targets, dtype=torch.int32)
+                        log_probs = torch.nn.functional.log_softmax(emissions, dim=-1)
+                        
+                        # Perform forced alignment
+                        alignments, scores = torchaudio.functional.forced_align(log_probs, targets, blank=0)
+                        
+                        # Approximate time ratio
+                        ratio = waveform.size(1) / emissions.size(1) / bundle.sample_rate
+                        
+                        # Merge tokens into words
+                        token_spans = torchaudio.functional.merge_tokens(alignments[0], scores[0])
+                        
+                        word_results = []
+                        current_word = ""
+                        current_start = None
+                        
+                        for span in token_spans:
+                            char = labels[span.token]
+                            if char == '|':
+                                if current_word:
+                                    word_results.append({
+                                        "word": current_word,
+                                        "start": round(current_start * ratio, 3),
+                                        "end": round(span.end * ratio, 3)
+                                    })
+                                    current_word = ""
+                                    current_start = None
+                            else:
+                                if current_start is None:
+                                    current_start = span.start
+                                current_word += char
+                                
+                        if current_word:
+                            word_results.append({
+                                "word": current_word,
+                                "start": round(current_start * ratio, 3),
+                                "end": round(token_spans[-1].end * ratio, 3)
+                            })
+                            
+                        with open(final_dir / "aligned_timestamps.json", "w") as jf:
+                            json.dump({"alignment": word_results}, jf, indent=2)
+                            
+                    except Exception as e:
+                        print(f"Forced alignment failed: {e}")
+
+        # Step 9: Zip the results
         progress_callback(90, "Finalizing and packaging your stems...")
         zip_path = WORK_DIR / f"vocals_{task_id}.zip"
         
