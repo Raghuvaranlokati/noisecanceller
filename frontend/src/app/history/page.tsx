@@ -97,19 +97,19 @@ function TaskStatusRow({ item, onDelete }: { item: any, onDelete: (id: string) =
         </div>
 
         <Link 
-          href={`/studio/${item.taskId}`}
+          href={status === 'completed' ? `/studio/${item.taskId}` : status === 'processing' ? `/?taskId=${item.taskId}` : '#'}
           className={`flex items-center justify-center sm:justify-start gap-2 px-4 py-3 sm:py-2 rounded-lg font-bold transition-all w-full sm:w-auto text-center ${
             status === 'processing' 
-              ? 'bg-[#1877F2]/10 text-[#1877F2] hover:bg-[#1877F2]/20 border border-[#1877F2]/30'
+              ? 'bg-[#1877F2]/10 text-[#1877F2] hover:bg-[#1877F2]/20 border border-[#1877F2]/30 cursor-pointer'
               : status === 'completed'
-                ? 'bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 border border-emerald-500/30'
+                ? 'bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 border border-emerald-500/30 cursor-pointer'
                 : 'bg-gray-800 text-gray-400 cursor-not-allowed opacity-50'
           }`}
           onClick={(e) => {
-            if (status !== 'completed') e.preventDefault();
+            if (status !== 'completed' && status !== 'processing') e.preventDefault();
           }}
         >
-          {status === 'processing' ? 'Processing...' : 'Open Studio'} <ExternalLink className="w-4 h-4" />
+          {status === 'processing' ? 'View Progress' : status === 'completed' ? 'Open Studio' : 'Failed'} <ExternalLink className="w-4 h-4" />
         </Link>
       </div>
     </div>
