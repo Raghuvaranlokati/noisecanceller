@@ -125,11 +125,15 @@ def process_audio_file(
         # Step 5: Whisper Lyric Sync (Optional)
         if lyric_sync and (final_dir / "vocals.wav").exists():
             progress_callback(80, "Transcribing vocals and generating synced lyrics...")
+            import json
             # Use tiny model for speed on CPU
             model = WhisperModel("tiny", device="cpu", compute_type="int8")
-            segments, info = model.transcribe(str(final_dir / "vocals.wav"), word_timestamps=False)
+            segments, info = model.transcribe(str(final_dir / "vocals.wav"), word_timestamps=True)
             
             srt_path = final_dir / "lyrics.srt"
+            json_path = final_dir / "transcript.json"
+            word_list = []
+            
             with open(srt_path, "w", encoding="utf-8") as f:
                 for i, segment in enumerate(segments, start=1):
                     def format_time(seconds):
@@ -142,6 +146,17 @@ def process_audio_file(
                     f.write(f"{i}\n")
                     f.write(f"{format_time(segment.start)} --> {format_time(segment.end)}\n")
                     f.write(f"{segment.text.strip()}\n\n")
+                    
+                    if hasattr(segment, 'words') and segment.words:
+                        for word_info in segment.words:
+                            word_list.append({
+                                "word": word_info.word.strip(),
+                                "start": word_info.start,
+                                "end": word_info.end
+                            })
+                            
+            with open(json_path, "w", encoding="utf-8") as jf:
+                json.dump({"words": word_list}, jf, indent=2)
 
         # Step 6: Stem-to-MIDI (Optional)
         if stem_to_midi:
