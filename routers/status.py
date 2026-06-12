@@ -68,7 +68,7 @@ async def download_result(task_id: str):
         filename=filename
     )
 
-from services.audio_service import create_custom_zip
+from services.audio_service import package_custom_download
 @router.get("/custom_download/{task_id}")
 async def custom_download(
     task_id: str, 
@@ -89,7 +89,13 @@ async def custom_download(
         raise HTTPException(status_code=400, detail="No stems requested")
         
     try:
-        zip_path = create_custom_zip(task_id, requested_stems, format=format, chunked=chunked.lower()=="true", folder_name=folder_name)
+        zip_path = package_custom_download(
+            task_id, 
+            requested_stems, 
+            output_format=format, 
+            chunked=(chunked.lower() == "true"), 
+            folder_name=folder_name
+        )
         return FileResponse(
             zip_path,
             media_type="application/zip",

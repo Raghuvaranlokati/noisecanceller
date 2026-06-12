@@ -220,25 +220,7 @@ def process_audio_file(
     finally:
         pass
 
-def create_custom_zip(task_id: str, requested_stems: list[str], format: str = "wav", chunked: bool = False, folder_name: str = "custom_stems") -> str:
-    import zipfile
-    import os
-    base_dir = os.path.join("temp_workdir", task_id)
-    zip_path = os.path.join(base_dir, f"{folder_name}_{task_id}.zip")
-    
-    stems_dir = os.path.join(base_dir, "final_stems")
-    if chunked:
-        stems_dir = os.path.join(base_dir, "chunked")
-        
-    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
-        if os.path.exists(stems_dir):
-            for root, _, files in os.walk(stems_dir):
-                for file in files:
-                    if file.endswith(f".{format}"):
-                        # Check if this file is one of the requested stems
-                        if any(stem.lower() in file.lower() for stem in requested_stems):
-                            zipf.write(os.path.join(root, file), file)
-    return zip_path
+
 
 def package_custom_download(
     task_id: str, 
