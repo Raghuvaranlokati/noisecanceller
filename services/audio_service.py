@@ -139,7 +139,7 @@ def process_audio_file(
             segments, info = model.transcribe(
                 str(target_audio_for_whisper), 
                 word_timestamps=True,
-                initial_prompt="Guys, ఈ project చాలా interesting ఉంది. Next video లో deployment చూద్దాం. AI tools ఉపయోగించి money earn చేయొచ్చు.",
+                language="te",  # Hardcoded exactly to Telugu
                 condition_on_previous_text=False
             )
             
@@ -147,7 +147,16 @@ def process_audio_file(
             json_path = final_dir / "transcript.json"
             word_list = []
             
-            with open(srt_path, "w", encoding="utf-8") as f:
+            # Dataset Setup
+            dataset_dir = final_dir / "dataset"
+            dataset_audio_dir = dataset_dir / "audio"
+            dataset_audio_dir.mkdir(parents=True, exist_ok=True)
+            dataset_metadata_path = dataset_dir / "metadata.csv"
+            
+            # Load full audio for slicing
+            full_audio = AudioSegment.from_wav(str(target_audio_for_whisper))
+            
+            with open(srt_path, "w", encoding="utf-8") as f, open(dataset_metadata_path, "w", encoding="utf-8") as metadata_f:
                 for i, segment in enumerate(segments, start=1):
                     def format_time(seconds):
                         hours = int(seconds // 3600)
@@ -156,9 +165,19 @@ def process_audio_file(
                         millis = int((seconds - int(seconds)) * 1000)
                         return f"{hours:02d}:{minutes:02d}:{secs:02d},{millis:03d}"
                     
+                    # SRT Writing
                     f.write(f"{i}\n")
                     f.write(f"{format_time(segment.start)} --> {format_time(segment.end)}\n")
-                    f.write(f"{segment.text.strip()}\n\n")
+                    text = segment.text.strip()
+                    f.write(f"{text}\n\n")
+                    
+                    # Dataset Generation
+                    start_ms = int(segment.start * 1000)
+                    end_ms = int(segment.end * 1000)
+                    chunk = full_audio[start_ms:end_ms]
+                    wav_filename = f"{i:04d}.wav"
+                    chunk.export(str(dataset_audio_dir / wav_filename), format="wav")
+                    metadata_f.write(f"audio/{wav_filename}|{text}\n")
                     
                     if hasattr(segment, 'words') and segment.words:
                         for word_info in segment.words:
@@ -352,9 +371,16 @@ def process_audio_file(
             for root, _, files in os.walk(str(final_dir)):
                 for file in files:
                     file_path = os.path.join(root, file)
+                    rel_path = os.path.relpath(file_path, str(final_dir))
                     
                     # Determine target folder for architecture
                     arc_folder = ""
+                    if rel_path.startswith("dataset"):
+                        # Preserve dataset folder structure exactly
+                        arcname = f"Stemify_Project/Transcripts/{rel_path.replace(os.sep, '/')}"
+                        zipf.write(file_path, arcname=arcname)
+                        continue
+                        
                     if file in ["vocals.wav", "instrumental.wav", "bass.wav", "drums.wav", "original.wav"]:
                         arc_folder = "Audio_Stems"
                     elif file in ["vocals_enhanced.wav", "vocals_dry.wav"]:
@@ -504,6 +530,12 @@ def package_custom_download(
                 src_file = final_stems_dir / text_file
                 if src_file.exists():
                     shutil.copy(str(src_file), str(transcript_folder / text_file))
+                    
+        # Also copy the dataset folder for ASR training if it exists (always included)
+        transcript_folder = base_dir / "Transcripts"
+        src_dataset = final_stems_dir / "dataset"
+        if src_dataset.exists():
+            shutil.copytree(str(src_dataset), str(transcript_folder / "dataset"), dirs_exist_ok=True)
                     
         # Zip everything up
         zip_path = task_dir / f"custom_download_{timestamp}.zip"
