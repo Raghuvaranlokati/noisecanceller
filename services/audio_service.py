@@ -123,8 +123,12 @@ def process_audio_file(
                 shutil.copy(out_files[0], str(final_dir / "vocals_dry.wav"))
 
         # Step 5: Whisper Lyric Sync (Optional)
-        target_audio_for_whisper = final_dir / "vocals.wav"
-        if not target_audio_for_whisper.exists():
+        target_audio_for_whisper = None
+        if (final_dir / "vocals_dry.wav").exists():
+            target_audio_for_whisper = final_dir / "vocals_dry.wav"
+        elif (final_dir / "vocals.wav").exists():
+            target_audio_for_whisper = final_dir / "vocals.wav"
+        else:
             target_audio_for_whisper = final_dir / "original.wav"
             
         if lyric_sync and target_audio_for_whisper.exists():
@@ -196,7 +200,9 @@ def process_audio_file(
                 
         # Step 7: Separate Speakers (Optional)
         target_audio_for_separation = None
-        if (final_dir / "vocals.wav").exists():
+        if (final_dir / "vocals_dry.wav").exists():
+            target_audio_for_separation = final_dir / "vocals_dry.wav"
+        elif (final_dir / "vocals.wav").exists():
             target_audio_for_separation = final_dir / "vocals.wav"
         elif (final_dir / "original.wav").exists():
             target_audio_for_separation = final_dir / "original.wav"
@@ -259,7 +265,9 @@ def process_audio_file(
                             
             if transcript_words:
                 target_audio = None
-                if (final_dir / "vocals.wav").exists():
+                if (final_dir / "vocals_dry.wav").exists():
+                    target_audio = final_dir / "vocals_dry.wav"
+                elif (final_dir / "vocals.wav").exists():
                     target_audio = final_dir / "vocals.wav"
                 elif (final_dir / "original.wav").exists():
                     target_audio = final_dir / "original.wav"
