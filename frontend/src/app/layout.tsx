@@ -42,7 +42,7 @@ export default function RootLayout({
       }}
     >
       <html lang="en" className={`${inter.variable} ${outfit.variable}`}>
-        <body className="flex flex-col min-h-screen bg-[#050505] text-[#E4E6EB] font-sans antialiased">
+        <body className="flex flex-col min-h-screen bg-[#050505] text-[#E4E6EB] font-sans antialiased overflow-x-hidden">
           <Navbar />
           <main className="flex-grow">
             {children}
