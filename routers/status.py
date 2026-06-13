@@ -117,8 +117,14 @@ async def stream_audio(task_id: str, filename: str):
     if not os.path.exists(file_path):
         raise HTTPException(status_code=404, detail="File not found")
         
-    media_type = "audio/wav"
-    if filename.endswith(".mp3"):
+    media_type = "application/octet-stream"
+    if filename.endswith(".wav"):
+        media_type = "audio/wav"
+    elif filename.endswith(".mp3"):
         media_type = "audio/mpeg"
+    elif filename.endswith(".json"):
+        media_type = "application/json"
+    elif filename.endswith(".srt") or filename.endswith(".txt") or filename.endswith(".csv"):
+        media_type = "text/plain"
         
     return FileResponse(file_path, media_type=media_type)

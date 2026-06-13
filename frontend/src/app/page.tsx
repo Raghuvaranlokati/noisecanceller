@@ -8,6 +8,7 @@ import { collection, addDoc, getDocs, query, where, deleteDoc, doc, serverTimest
 import ExtractionFlowDiagram from "../components/ExtractionFlowDiagram";
 import QueueWaitingRoom from "../components/QueueWaitingRoom";
 import SyncedTranscriptPlayer from "../components/SyncedTranscriptPlayer";
+import RawTranscriptViewer from "../components/RawTranscriptViewer";
 
 function HomeContent() {
   const [file, setFile] = useState<File | null>(null);
@@ -606,6 +607,7 @@ function HomeContent() {
                 </div>
 
                 {lyricSync && <SyncedTranscriptPlayer taskId={taskId} baseUrl={baseUrl} audioRef={vocalsAudioRef} />}
+                {lyricSync && <RawTranscriptViewer taskId={taskId} baseUrl={baseUrl} />}
 
                 <div className="bg-[#111] border border-[#27272a] rounded-2xl p-6 mb-8 w-full max-w-xl mx-auto">
                   <h4 className="text-lg font-bold text-white mb-4">Download Customization</h4>
