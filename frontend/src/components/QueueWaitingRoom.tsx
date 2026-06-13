@@ -32,8 +32,16 @@ const QueueWaitingRoom: React.FC<QueueWaitingRoomProps> = ({ position, etaSecond
           <h2 className="text-3xl md:text-4xl font-extrabold text-white tracking-tight">
             You are in line.
           </h2>
-          <p className="text-gray-400 text-sm max-w-md mx-auto">
-            Our AI models are heavy! To prevent server crashes, we process extractions one by one. Please leave this page open.
+          <p className="text-gray-400 text-sm max-w-md mx-auto mt-2">
+            Our AI models are heavy, so we process extractions one by one.
+            <br/><br/>
+            <span className="text-emerald-400 font-bold block animate-pulse">
+              You can safely close this tab!
+            </span>
+            <span className="text-xs text-gray-500 mt-1 block">
+              Your audio is processing securely in the background. You can come back later and check your <strong>History</strong> page to download the results. <br/>
+              <em>(Note: Tasks may be lost if the upstream server performs a hardware restart)</em>
+            </span>
           </p>
         </div>
 

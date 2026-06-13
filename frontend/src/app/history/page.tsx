@@ -97,7 +97,7 @@ function TaskStatusRow({ item, onDelete }: { item: any, onDelete: (id: string) =
         </div>
 
         <Link 
-          href={status === 'completed' ? `/studio/${item.taskId}` : status === 'processing' ? `/?taskId=${item.taskId}` : '#'}
+          href={status === 'completed' ? `/?taskId=${item.taskId}` : status === 'processing' ? `/?taskId=${item.taskId}` : '#'}
           className={`flex items-center justify-center sm:justify-start gap-2 px-4 py-3 sm:py-2 rounded-lg font-bold transition-all w-full sm:w-auto text-center ${
             status === 'processing' 
               ? 'bg-[#1877F2]/10 text-[#1877F2] hover:bg-[#1877F2]/20 border border-[#1877F2]/30 cursor-pointer'
@@ -109,7 +109,7 @@ function TaskStatusRow({ item, onDelete }: { item: any, onDelete: (id: string) =
             if (status !== 'completed' && status !== 'processing') e.preventDefault();
           }}
         >
-          {status === 'processing' ? 'View Progress' : status === 'completed' ? 'Open Studio' : 'Failed'} <ExternalLink className="w-4 h-4" />
+          {status === 'processing' ? 'View Progress' : status === 'completed' ? 'View Results' : 'Failed'} <ExternalLink className="w-4 h-4" />
         </Link>
       </div>
     </div>
