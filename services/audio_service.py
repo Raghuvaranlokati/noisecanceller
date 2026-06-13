@@ -139,7 +139,7 @@ def process_audio_file(
             segments, info = model.transcribe(
                 str(target_audio_for_whisper), 
                 word_timestamps=True,
-                language="te",  # Hardcoded exactly to Telugu
+                initial_prompt="Guys, ఈ project చాలా interesting ఉంది. Next video లో deployment చూద్దాం. AI tools ఉపయోగించి money earn చేయొచ్చు.",
                 condition_on_previous_text=False
             )
             
