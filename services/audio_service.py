@@ -134,11 +134,12 @@ def process_audio_file(
         if lyric_sync and target_audio_for_whisper.exists():
             progress_callback(80, "Transcribing vocals and generating synced lyrics...")
             import json
-            # Use tiny model for speed on CPU
-            model = WhisperModel("tiny", device="cpu", compute_type="int8")
+            # Use small model for significantly better Telugu accuracy
+            model = WhisperModel("small", device="cpu", compute_type="int8")
             segments, info = model.transcribe(
                 str(target_audio_for_whisper), 
                 word_timestamps=True,
+                language="te",  # Hardcoded exactly to Telugu
                 condition_on_previous_text=False,
                 vad_filter=True  # Optional but highly recommended to skip silence and prevent hallucinations
             )
