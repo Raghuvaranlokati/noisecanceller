@@ -26,8 +26,10 @@ function TaskStatusRow({ item, onDelete }: { item: any, onDelete: (id: string) =
       try {
         const res = await fetch(`${baseUrl}/api/status/${item.taskId}`);
         if (res.status === 404) {
-          // Task expired/deleted
-          onDelete(item.id);
+          // Task lost from upstream server (e.g., Space restarted)
+          setStatus("expired");
+          setProgressText("Task Expired (Cleaned from server)");
+          clearInterval(interval);
           return;
         }
         
@@ -91,11 +93,12 @@ function TaskStatusRow({ item, onDelete }: { item: any, onDelete: (id: string) =
           {status === "completed" && <CheckCircle2 className="w-5 h-5 text-emerald-500" />}
           {status === "failed" && <XCircle className="w-5 h-5 text-red-500" />}
           {status === "cancelled" && <XCircle className="w-5 h-5 text-gray-500" />}
+          {status === "expired" && <SearchX className="w-5 h-5 text-gray-500" />}
           
           <span className={`text-sm font-bold ${
             status === 'completed' ? 'text-emerald-500' : 
             status === 'failed' ? 'text-red-500' : 
-            status === 'cancelled' ? 'text-gray-500' :
+            status === 'cancelled' || status === 'expired' ? 'text-gray-500' :
             status === 'processing' ? 'text-[#1877F2]' : 'text-gray-500'
           }`}>
             {progressText}
@@ -115,7 +118,7 @@ function TaskStatusRow({ item, onDelete }: { item: any, onDelete: (id: string) =
             if (status !== 'completed' && status !== 'processing') e.preventDefault();
           }}
         >
-          {status === 'processing' ? 'View Progress' : status === 'completed' ? 'View Results' : status === 'cancelled' ? 'Cancelled' : 'Failed'} <ExternalLink className="w-4 h-4" />
+          {status === 'processing' ? 'View Progress' : status === 'completed' ? 'View Results' : status === 'cancelled' ? 'Cancelled' : status === 'expired' ? 'Expired' : 'Failed'} <ExternalLink className="w-4 h-4" />
         </Link>
       </div>
     </div>
