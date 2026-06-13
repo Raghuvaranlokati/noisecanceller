@@ -65,12 +65,42 @@ def process_audio_file(
                 cmd.insert(5, "--two-stems")
                 cmd.insert(6, "vocals")
                 
+            from core.state import state
+            import re
+            
             try:
-                result = subprocess.run(cmd, capture_output=True, text=True)
-                if result.returncode != 0:
-                    raise RuntimeError(f"Native Demucs processing failed. STDOUT: {result.stdout}\nSTDERR: {result.stderr}")
+                process = subprocess.Popen(
+                    cmd, 
+                    stdout=subprocess.PIPE, 
+                    stderr=subprocess.STDOUT, 
+                    text=True, 
+                    bufsize=1, 
+                    universal_newlines=True
+                )
+                state.active_processes[task_id] = process
+                
+                for line in process.stdout:
+                    if task_id in state.cancelled_tasks:
+                        process.terminate()
+                        raise Exception("Task cancelled by user")
+                        
+                    m = re.search(r'(\d+)%', line)
+                    if m:
+                        pct = int(m.group(1))
+                        # Map 0-100% to 30-70% of global progress
+                        mapped_pct = 30 + int(pct * 0.4)
+                        progress_callback(mapped_pct, f"Isolating stems ({pct}%)...")
+                        
+                process.wait()
+                if process.returncode != 0 and task_id not in state.cancelled_tasks:
+                    raise RuntimeError(f"Native Demucs processing failed. Code: {process.returncode}")
             except Exception as e:
+                if task_id in state.cancelled_tasks:
+                    raise Exception("Task cancelled by user")
                 raise RuntimeError(f"Native Demucs processing crashed. Error: {e}")
+            finally:
+                if task_id in state.active_processes:
+                    del state.active_processes[task_id]
                 
             # Demucs outputs to: {demucs_out}/htdemucs/converted/{stem}.wav
             demucs_converted_dir = demucs_out / "htdemucs" / "converted"

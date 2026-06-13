@@ -414,7 +414,23 @@ function HomeContent() {
             
             {/* MAIN FLOW DIAGRAM OR QUEUE */}
             {(progress as any).status === "queued" ? (
-              <QueueWaitingRoom position={progress.queue_position} etaSeconds={progress.eta_seconds} />
+              <QueueWaitingRoom 
+                position={progress.queue_position} 
+                etaSeconds={progress.eta_seconds} 
+                onCancel={async () => {
+                  if (!taskId) return;
+                  try {
+                    await fetch(`${baseUrl}/api/cancel/${taskId}`, { method: 'POST' });
+                    setLoading(false);
+                    setResultZip(null);
+                    setTaskId(null);
+                    setFile(null);
+                    setError("Processing was cancelled from the queue.");
+                  } catch (err) {
+                    console.error(err);
+                  }
+                }}
+              />
             ) : (
               <ExtractionFlowDiagram isProcessing={loading} progress={progress.percent} />
             )}
@@ -542,6 +558,25 @@ function HomeContent() {
                     </div>
                   </div>
                 )}
+                
+                <button 
+                  onClick={async () => {
+                    if (!taskId) return;
+                    try {
+                      await fetch(`${baseUrl}/api/cancel/${taskId}`, { method: 'POST' });
+                      setLoading(false);
+                      setResultZip(null);
+                      setTaskId(null);
+                      setFile(null);
+                      setError("Processing was cancelled.");
+                    } catch (err) {
+                      console.error(err);
+                    }
+                  }}
+                  className="mt-8 px-6 py-2 border border-red-500/50 text-red-400 hover:bg-red-500/10 rounded-full text-sm font-medium transition-colors"
+                >
+                  Cancel Processing
+                </button>
               </div>
             )}
 

@@ -39,6 +39,10 @@ def run_audio_processing(task_id: str, file_path: str, isolate_vocals: bool, iso
             send_completed_email(user_email, task_id)
             
     except Exception as e:
-        tasks_status[task_id]["status"] = "failed"
-        tasks_status[task_id]["message"] = str(e)
+        if str(e) == "Task cancelled by user":
+            tasks_status[task_id]["status"] = "cancelled"
+            tasks_status[task_id]["message"] = "Task cancelled by user"
+        else:
+            tasks_status[task_id]["status"] = "failed"
+            tasks_status[task_id]["message"] = str(e)
         print(f"Error processing {task_id}: {e}")

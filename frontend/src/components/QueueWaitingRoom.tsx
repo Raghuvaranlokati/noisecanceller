@@ -4,9 +4,10 @@ import { Clock, Users, Zap, ShieldCheck } from 'lucide-react';
 interface QueueWaitingRoomProps {
   position: number;
   etaSeconds: number;
+  onCancel?: () => void;
 }
 
-const QueueWaitingRoom: React.FC<QueueWaitingRoomProps> = ({ position, etaSeconds }) => {
+const QueueWaitingRoom: React.FC<QueueWaitingRoomProps> = ({ position, etaSeconds, onCancel }) => {
   // Format ETA beautifully
   const minutes = Math.floor(etaSeconds / 60);
   const seconds = etaSeconds % 60;
@@ -81,6 +82,15 @@ const QueueWaitingRoom: React.FC<QueueWaitingRoomProps> = ({ position, etaSecond
                 <span className="text-[10px] text-gray-600 mt-1">Highest quality output</span>
             </div>
         </div>
+        
+        {onCancel && (
+          <button 
+            onClick={onCancel}
+            className="mt-2 px-6 py-2 border border-red-500/50 text-red-400 hover:bg-red-500/10 rounded-full text-sm font-medium transition-colors"
+          >
+            Cancel Processing
+          </button>
+        )}
 
       </div>
       

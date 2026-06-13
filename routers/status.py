@@ -2,9 +2,37 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
 import os
 import time
-from core.state import job_queue, tasks_status, state
+from core.state import job_queue, tasks_status, state, save_db
 
 router = APIRouter(prefix="/api")
+
+@router.post("/cancel/{task_id}")
+async def cancel_task(task_id: str):
+    if task_id not in tasks_status:
+        raise HTTPException(status_code=404, detail="Task not found")
+        
+    status_data = tasks_status[task_id]
+    
+    if status_data["status"] == "completed":
+        raise HTTPException(status_code=400, detail="Task already completed")
+        
+    state.cancelled_tasks.add(task_id)
+    
+    # If the task is currently processing via a tracked subprocess, kill it
+    if task_id in state.active_processes:
+        process = state.active_processes[task_id]
+        if process and process.poll() is None:
+            try:
+                process.terminate() # Or kill()
+            except Exception:
+                pass
+                
+    if status_data["status"] == "queued":
+        status_data["status"] = "cancelled"
+        status_data["message"] = "Task cancelled by user"
+        save_db()
+        
+    return {"status": "cancelled"}
 
 @router.get("/status/{task_id}")
 async def get_status(task_id: str):
