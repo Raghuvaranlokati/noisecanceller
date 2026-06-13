@@ -17,6 +17,7 @@ basic-pitch==0.3.0
 faster-whisper
 audio-separator[cpu]
 pyannote.audio
+huggingface-hub==0.22.2
 pydub
 
 deepfilternet
