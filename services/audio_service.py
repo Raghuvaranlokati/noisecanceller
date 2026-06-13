@@ -397,6 +397,12 @@ def package_custom_download(
                     ]
                     subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                     
+        # Copy subtitles and transcripts if they exist
+        for text_file in ["lyrics.srt", "transcript.json", "aligned_timestamps.json"]:
+            src_file = final_stems_dir / text_file
+            if src_file.exists():
+                shutil.copy(str(src_file), str(base_dir / text_file))
+                    
         # Zip everything up
         zip_path = task_dir / f"custom_download_{timestamp}.zip"
         with zipfile.ZipFile(str(zip_path), 'w', zipfile.ZIP_DEFLATED) as zipf:
