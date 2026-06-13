@@ -206,7 +206,7 @@ function HomeContent() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 relative">
           
           {/* Subtle global background glow behind the entire dashboard */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1000px] h-[1000px] bg-[#1877F2]/5 rounded-full blur-[150px] pointer-events-none z-0" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-[1000px] aspect-square bg-[#1877F2]/5 rounded-full blur-[100px] pointer-events-none z-0" />
 
           {/* LEFT SIDEBAR: TOOLS PANEL */}
           <div className="lg:col-span-4 bg-[#111] border border-[#27272a] rounded-3xl p-6 shadow-2xl relative z-10 flex flex-col h-full">
