@@ -41,6 +41,10 @@ function TaskStatusRow({ item, onDelete }: { item: any, onDelete: (id: string) =
           setStatus("failed");
           setProgressText("Processing Failed");
           clearInterval(interval);
+        } else if (data.status === "cancelled") {
+          setStatus("cancelled");
+          setProgressText("Cancelled by User");
+          clearInterval(interval);
         } else {
           setStatus("processing");
           setProgressText(`${data.progress || 0}% - ${data.message || "Working..."}`);
@@ -86,10 +90,12 @@ function TaskStatusRow({ item, onDelete }: { item: any, onDelete: (id: string) =
           {status === "processing" && <Loader2 className="w-5 h-5 text-[#1877F2] animate-spin" />}
           {status === "completed" && <CheckCircle2 className="w-5 h-5 text-emerald-500" />}
           {status === "failed" && <XCircle className="w-5 h-5 text-red-500" />}
+          {status === "cancelled" && <XCircle className="w-5 h-5 text-gray-500" />}
           
           <span className={`text-sm font-bold ${
             status === 'completed' ? 'text-emerald-500' : 
             status === 'failed' ? 'text-red-500' : 
+            status === 'cancelled' ? 'text-gray-500' :
             status === 'processing' ? 'text-[#1877F2]' : 'text-gray-500'
           }`}>
             {progressText}
@@ -109,7 +115,7 @@ function TaskStatusRow({ item, onDelete }: { item: any, onDelete: (id: string) =
             if (status !== 'completed' && status !== 'processing') e.preventDefault();
           }}
         >
-          {status === 'processing' ? 'View Progress' : status === 'completed' ? 'View Results' : 'Failed'} <ExternalLink className="w-4 h-4" />
+          {status === 'processing' ? 'View Progress' : status === 'completed' ? 'View Results' : status === 'cancelled' ? 'Cancelled' : 'Failed'} <ExternalLink className="w-4 h-4" />
         </Link>
       </div>
     </div>
