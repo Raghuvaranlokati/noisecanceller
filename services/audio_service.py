@@ -339,7 +339,24 @@ def process_audio_file(
             for root, _, files in os.walk(str(final_dir)):
                 for file in files:
                     file_path = os.path.join(root, file)
-                    zipf.write(file_path, arcname=file)
+                    
+                    # Determine target folder for architecture
+                    arc_folder = ""
+                    if file in ["vocals.wav", "instrumental.wav", "bass.wav", "drums.wav", "original.wav"]:
+                        arc_folder = "Audio_Stems"
+                    elif file in ["vocals_enhanced.wav", "vocals_dry.wav"]:
+                        arc_folder = "Enhanced_Audio"
+                    elif file.startswith("speaker_") and file.endswith(".wav"):
+                        arc_folder = "Speaker_Separation"
+                    elif file.endswith(".mid"):
+                        arc_folder = "MIDI_Notes"
+                    elif file in ["lyrics.srt", "transcript.json", "transcript.csv", "aligned_timestamps.json", "aligned_timestamps.csv"]:
+                        arc_folder = "Transcripts"
+                    else:
+                        arc_folder = "Misc"
+                        
+                    arcname = f"Stemify_Project/{arc_folder}/{file}"
+                    zipf.write(file_path, arcname=arcname)
                     
         progress_callback(100, "Done!")
         return str(zip_path)
@@ -468,10 +485,12 @@ def package_custom_download(
             
         else:
             # Copy subtitles and transcripts if they exist normally
+            transcript_folder = base_dir / "Transcripts"
+            transcript_folder.mkdir(exist_ok=True)
             for text_file in ["lyrics.srt", "transcript.json", "transcript.csv", "aligned_timestamps.json", "aligned_timestamps.csv"]:
                 src_file = final_stems_dir / text_file
                 if src_file.exists():
-                    shutil.copy(str(src_file), str(base_dir / text_file))
+                    shutil.copy(str(src_file), str(transcript_folder / text_file))
                     
         # Zip everything up
         zip_path = task_dir / f"custom_download_{timestamp}.zip"
