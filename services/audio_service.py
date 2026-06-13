@@ -140,8 +140,7 @@ def process_audio_file(
                 str(target_audio_for_whisper), 
                 word_timestamps=True,
                 language="te",  # Hardcoded exactly to Telugu
-                condition_on_previous_text=False,
-                vad_filter=True  # Optional but highly recommended to skip silence and prevent hallucinations
+                condition_on_previous_text=False
             )
             
             srt_path = final_dir / "lyrics.srt"
