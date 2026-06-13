@@ -132,7 +132,13 @@ def process_audio_file(
             import json
             # Use tiny model for speed on CPU
             model = WhisperModel("tiny", device="cpu", compute_type="int8")
-            segments, info = model.transcribe(str(target_audio_for_whisper), word_timestamps=True)
+            segments, info = model.transcribe(
+                str(target_audio_for_whisper), 
+                word_timestamps=True,
+                language="en",
+                condition_on_previous_text=False,
+                vad_filter=True  # Optional but highly recommended to skip silence and prevent hallucinations
+            )
             
             srt_path = final_dir / "lyrics.srt"
             json_path = final_dir / "transcript.json"
