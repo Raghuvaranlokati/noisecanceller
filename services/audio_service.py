@@ -157,6 +157,14 @@ def process_audio_file(
                             
             with open(json_path, "w", encoding="utf-8") as jf:
                 json.dump({"words": word_list}, jf, indent=2)
+                
+            csv_path = final_dir / "transcript.csv"
+            import csv
+            with open(csv_path, "w", newline="", encoding="utf-8") as cf:
+                writer = csv.writer(cf)
+                writer.writerow(["word", "start", "end"])
+                for w in word_list:
+                    writer.writerow([w["word"], w["start"], w["end"]])
 
         # Step 6: Stem-to-MIDI (Optional)
         if stem_to_midi:
@@ -310,6 +318,12 @@ def process_audio_file(
                         with open(final_dir / "aligned_timestamps.json", "w") as jf:
                             json.dump({"alignment": word_results}, jf, indent=2)
                             
+                        with open(final_dir / "aligned_timestamps.csv", "w", newline="", encoding="utf-8") as cf:
+                            writer = csv.writer(cf)
+                            writer.writerow(["word", "start", "end"])
+                            for w in word_results:
+                                writer.writerow([w["word"], w["start"], w["end"]])
+                            
                     except Exception as e:
                         print(f"Forced alignment failed: {e}")
 
@@ -398,7 +412,7 @@ def package_custom_download(
                     subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                     
         # Copy subtitles and transcripts if they exist
-        for text_file in ["lyrics.srt", "transcript.json", "aligned_timestamps.json"]:
+        for text_file in ["lyrics.srt", "transcript.json", "transcript.csv", "aligned_timestamps.json", "aligned_timestamps.csv"]:
             src_file = final_stems_dir / text_file
             if src_file.exists():
                 shutil.copy(str(src_file), str(base_dir / text_file))
