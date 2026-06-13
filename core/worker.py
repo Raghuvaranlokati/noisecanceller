@@ -47,19 +47,23 @@ def cleanup_worker():
     while True:
         try:
             now = time.time()
-            for directory in ["downloads", "results"]:
+            for directory in ["temp_workdir", "downloads", "results"]:
                 if not os.path.exists(directory):
                     continue
-                for filename in os.listdir(directory):
-                    filepath = os.path.join(directory, filename)
-                    if os.path.isfile(filepath):
+                for item in os.listdir(directory):
+                    item_path = os.path.join(directory, item)
+                    if os.path.isfile(item_path) or os.path.isdir(item_path):
                         # Delete if older than 24 hours (86400 seconds)
-                        if os.stat(filepath).st_mtime < now - 86400:
+                        if os.stat(item_path).st_mtime < now - 86400:
                             try:
-                                os.remove(filepath)
-                                print(f"Cleaned up old file: {filepath}")
+                                if os.path.isfile(item_path):
+                                    os.remove(item_path)
+                                else:
+                                    import shutil
+                                    shutil.rmtree(item_path)
+                                print(f"Cleaned up old file/folder: {item_path}")
                             except Exception as e:
-                                print(f"Failed to clean {filepath}: {e}")
+                                print(f"Failed to clean {item_path}: {e}")
         except Exception as e:
             print(f"Cleanup error: {e}")
         
