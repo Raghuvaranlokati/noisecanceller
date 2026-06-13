@@ -411,11 +411,57 @@ def package_custom_download(
                     ]
                     subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                     
-        # Copy subtitles and transcripts if they exist
-        for text_file in ["lyrics.srt", "transcript.json", "transcript.csv", "aligned_timestamps.json", "aligned_timestamps.csv"]:
-            src_file = final_stems_dir / text_file
-            if src_file.exists():
-                shutil.copy(str(src_file), str(base_dir / text_file))
+        # Handle subtitles and transcripts
+        if chunked:
+            import json
+            import csv
+            transcript_folder = base_dir / "Transcripts"
+            transcript_folder.mkdir(exist_ok=True)
+            
+            def chunk_transcript(src_json, prefix):
+                if not src_json.exists():
+                    return
+                with open(src_json, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                
+                words = data.get("words", data.get("alignment", []))
+                if not words:
+                    return
+                
+                chunks = {}
+                for w in words:
+                    chunk_idx = int(w["start"] // 50) + 1
+                    if chunk_idx not in chunks:
+                        chunks[chunk_idx] = []
+                    
+                    offset = (chunk_idx - 1) * 50
+                    chunks[chunk_idx].append({
+                        "word": w["word"],
+                        "start": round(max(0, w["start"] - offset), 3),
+                        "end": round(w["end"] - offset, 3)
+                    })
+                    
+                for idx, chunk_words in chunks.items():
+                    out_json = transcript_folder / f"{prefix}_ad{idx:04d}.json"
+                    with open(out_json, "w", encoding="utf-8") as f:
+                        json.dump({"words": chunk_words}, f, indent=2)
+                        
+                    out_csv = transcript_folder / f"{prefix}_ad{idx:04d}.csv"
+                    with open(out_csv, "w", newline="", encoding="utf-8") as f:
+                        writer = csv.writer(f)
+                        writer.writerow(["word", "start", "end"])
+                        for cw in chunk_words:
+                            writer.writerow([cw["word"], cw["start"], cw["end"]])
+
+            chunk_transcript(final_stems_dir / "transcript.json", "whisper")
+            chunk_transcript(final_stems_dir / "aligned_timestamps.json", "aligned")
+            
+        else:
+            # Copy subtitles and transcripts if they exist normally
+            for text_file in ["lyrics.srt", "transcript.json", "transcript.csv", "aligned_timestamps.json", "aligned_timestamps.csv"]:
+                src_file = final_stems_dir / text_file
+                if src_file.exists():
+                    shutil.copy(str(src_file), str(base_dir / text_file))
                     
         # Zip everything up
         zip_path = task_dir / f"custom_download_{timestamp}.zip"
