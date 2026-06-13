@@ -58,6 +58,12 @@ function HomeContent() {
           clearInterval(interval);
           setError(data.message || data.error || "An unknown error occurred on the server.");
           setLoading(false);
+        } else if (data.status === "cancelled" || data.status === "expired") {
+          clearInterval(interval);
+          setError(data.status === "cancelled" ? "Processing was cancelled." : "Task expired or was cleaned from the server.");
+          setLoading(false);
+          setTaskId(null);
+          window.history.replaceState({}, '', '/');
         }
       } catch (err) {
         // Keep trying
@@ -425,6 +431,7 @@ function HomeContent() {
                     setResultZip(null);
                     setTaskId(null);
                     setFile(null);
+                    window.history.replaceState({}, '', '/');
                     setError("Processing was cancelled from the queue.");
                   } catch (err) {
                     console.error(err);
@@ -568,6 +575,7 @@ function HomeContent() {
                       setResultZip(null);
                       setTaskId(null);
                       setFile(null);
+                      window.history.replaceState({}, '', '/');
                       setError("Processing was cancelled.");
                     } catch (err) {
                       console.error(err);
