@@ -58,7 +58,7 @@ export default function ExtractionFlowDiagram({ isProcessing, progress }: { isPr
           {/* Progress fill */}
           <div 
             className="w-full bg-gradient-to-b from-[#1877F2] via-purple-500 to-emerald-500 transition-all duration-1000 ease-in-out relative"
-            style={{ height: \`\${(activeStageIndex / 5) * 100}%\` }}
+            style={{ height: `${(activeStageIndex / 5) * 100}%` }}
           >
              <div className="absolute bottom-0 left-0 w-full h-10 bg-white/50 blur-sm animate-pulse"></div>
           </div>
@@ -70,27 +70,27 @@ export default function ExtractionFlowDiagram({ isProcessing, progress }: { isPr
           const Icon = stage.icon;
           
           return (
-            <div key={stage.id} className={\`relative flex items-center gap-6 md:gap-8 transition-all duration-500 \${isActive ? 'scale-105 opacity-100' : isPast ? 'opacity-70 scale-100' : 'opacity-30 scale-95'}\`}>
+            <div key={stage.id} className={`relative flex items-center gap-6 md:gap-8 transition-all duration-500 ${isActive ? 'scale-105 opacity-100' : isPast ? 'opacity-70 scale-100' : 'opacity-30 scale-95'}`}>
               
               {/* Node Icon */}
-              <div className={\`w-20 h-20 md:w-24 md:h-24 shrink-0 rounded-2xl border-2 flex flex-col items-center justify-center relative z-10 transition-all duration-500 \${isActive ? stage.bg + ' ' + stage.glow : isPast ? 'bg-[#111] border-gray-600' : 'bg-[#0a0a0a] border-[#27272a]'}\`}>
+              <div className={`w-20 h-20 md:w-24 md:h-24 shrink-0 rounded-2xl border-2 flex flex-col items-center justify-center relative z-10 transition-all duration-500 ${isActive ? stage.bg + ' ' + stage.glow : isPast ? 'bg-[#111] border-gray-600' : 'bg-[#0a0a0a] border-[#27272a]'}`}>
                 
                 {isActive && <div className="absolute inset-0 rounded-2xl bg-white/5 animate-ping opacity-50"></div>}
                 
                 {isPast ? (
                   <CheckCircle2 className="w-8 h-8 text-emerald-500 mb-1" />
                 ) : (
-                  <Icon className={\`w-8 h-8 mb-1 \${isActive ? stage.color : 'text-gray-500'}\`} />
+                  <Icon className={`w-8 h-8 mb-1 ${isActive ? stage.color : 'text-gray-500'}`} />
                 )}
               </div>
 
               {/* Node Info */}
               <div className="flex flex-col">
-                <span className={\`text-lg md:text-xl font-bold \${isActive ? 'text-white' : 'text-gray-400'}\`}>
+                <span className={`text-lg md:text-xl font-bold ${isActive ? 'text-white' : 'text-gray-400'}`}>
                   {stage.title}
                 </span>
                 {stage.desc && (
-                  <span className={\`text-xs md:text-sm \${isActive ? stage.color : 'text-gray-500'}\`}>
+                  <span className={`text-xs md:text-sm ${isActive ? stage.color : 'text-gray-500'}`}>
                     {stage.desc}
                   </span>
                 )}
