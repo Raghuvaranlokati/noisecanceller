@@ -84,6 +84,8 @@ function HomeContent() {
   }, []);
   
   // Feature Toggles
+  const [isolateVocals, setIsolateVocals] = useState<boolean>(true);
+  const [isolateInstrumental, setIsolateInstrumental] = useState<boolean>(true);
   const [fourStem, setFourStem] = useState<boolean>(false);
   const [enhance, setEnhance] = useState<boolean>(false);
   const [stemToMidi, setStemToMidi] = useState<boolean>(false);
@@ -133,8 +135,8 @@ function HomeContent() {
 
     const formData = new FormData();
     formData.append("file", file);
-    formData.append("isolate_vocals", "true");
-    formData.append("isolate_instrumental", "true");
+    formData.append("isolate_vocals", isolateVocals.toString());
+    formData.append("isolate_instrumental", isolateInstrumental.toString());
     formData.append("four_stem", fourStem.toString());
     formData.append("enhance_speech", enhance.toString());
     formData.append("stem_to_midi", stemToMidi.toString());
@@ -213,8 +215,52 @@ function HomeContent() {
               </h2>
             </div>
             
-            {/* Active Tools */}
+            {/* Basic Extraction Tools */}
             <div className="space-y-4">
+              <button 
+                onClick={() => setIsolateVocals(!isolateVocals)}
+                className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all text-left ${
+                  isolateVocals 
+                    ? 'bg-[#1877F2]/10 border-[#1877F2] shadow-[0_0_15px_rgba(24,119,242,0.15)]' 
+                    : 'bg-[#050505] border-[#27272a] hover:border-gray-500'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isolateVocals ? 'bg-[#1877F2] text-white' : 'bg-[#18191A] text-gray-400'}`}>
+                    <Mic2 className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className={`font-bold ${isolateVocals ? 'text-white' : 'text-gray-300'}`}>Isolate Vocals</h3>
+                    <p className="text-xs text-gray-500">Extract clean acapellas</p>
+                  </div>
+                </div>
+                <div className={`w-12 h-6 rounded-full p-1 transition-colors ${isolateVocals ? 'bg-[#1877F2]' : 'bg-[#27272a]'}`}>
+                  <div className={`w-4 h-4 bg-white rounded-full transition-transform ${isolateVocals ? 'translate-x-6' : 'translate-x-0'}`} />
+                </div>
+              </button>
+
+              <button 
+                onClick={() => setIsolateInstrumental(!isolateInstrumental)}
+                className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all text-left ${
+                  isolateInstrumental 
+                    ? 'bg-rose-500/10 border-rose-500 shadow-[0_0_15px_rgba(244,63,94,0.15)]' 
+                    : 'bg-[#050505] border-[#27272a] hover:border-gray-500'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isolateInstrumental ? 'bg-rose-500 text-white' : 'bg-[#18191A] text-gray-400'}`}>
+                    <AudioLines className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className={`font-bold ${isolateInstrumental ? 'text-white' : 'text-gray-300'}`}>Isolate Instrumental</h3>
+                    <p className="text-xs text-gray-500">Remove vocals, keep music</p>
+                  </div>
+                </div>
+                <div className={`w-12 h-6 rounded-full p-1 transition-colors ${isolateInstrumental ? 'bg-rose-500' : 'bg-[#27272a]'}`}>
+                  <div className={`w-4 h-4 bg-white rounded-full transition-transform ${isolateInstrumental ? 'translate-x-6' : 'translate-x-0'}`} />
+                </div>
+              </button>
+
               <button 
                 onClick={() => setFourStem(!fourStem)}
                 className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all text-left ${
@@ -229,7 +275,7 @@ function HomeContent() {
                   </div>
                   <div>
                     <h3 className={`font-bold ${fourStem ? 'text-white' : 'text-gray-300'}`}>4-Stem Separation</h3>
-                    <p className="text-xs text-gray-500">Extract Vocals, Drums, Bass, & Other</p>
+                    <p className="text-xs text-gray-500">Vocals, Drums, Bass, & Other</p>
                   </div>
                 </div>
                 {/* Custom Toggle Switch UI */}
@@ -248,7 +294,7 @@ function HomeContent() {
               >
                 <div className="flex items-center gap-3">
                   <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${enhance ? 'bg-purple-500 text-white' : 'bg-[#18191A] text-gray-400'}`}>
-                    <AudioLines className="w-5 h-5" />
+                    <Activity className="w-5 h-5" />
                   </div>
                   <div>
                     <h3 className={`font-bold ${enhance ? 'text-white' : 'text-gray-300'}`}>Studio Denoise</h3>
