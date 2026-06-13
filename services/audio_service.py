@@ -123,12 +123,16 @@ def process_audio_file(
                 shutil.copy(out_files[0], str(final_dir / "vocals_dry.wav"))
 
         # Step 5: Whisper Lyric Sync (Optional)
-        if lyric_sync and (final_dir / "vocals.wav").exists():
+        target_audio_for_whisper = final_dir / "vocals.wav"
+        if not target_audio_for_whisper.exists():
+            target_audio_for_whisper = final_dir / "original.wav"
+            
+        if lyric_sync and target_audio_for_whisper.exists():
             progress_callback(80, "Transcribing vocals and generating synced lyrics...")
             import json
             # Use tiny model for speed on CPU
             model = WhisperModel("tiny", device="cpu", compute_type="int8")
-            segments, info = model.transcribe(str(final_dir / "vocals.wav"), word_timestamps=True)
+            segments, info = model.transcribe(str(target_audio_for_whisper), word_timestamps=True)
             
             srt_path = final_dir / "lyrics.srt"
             json_path = final_dir / "transcript.json"
@@ -455,6 +459,12 @@ def package_custom_download(
 
             chunk_transcript(final_stems_dir / "transcript.json", "whisper")
             chunk_transcript(final_stems_dir / "aligned_timestamps.json", "aligned")
+            
+            # Also copy the global .srt files to Transcripts folder just in case
+            for text_file in ["lyrics.srt"]:
+                src_file = final_stems_dir / text_file
+                if src_file.exists():
+                    shutil.copy(str(src_file), str(transcript_folder / text_file))
             
         else:
             # Copy subtitles and transcripts if they exist normally
