@@ -139,7 +139,6 @@ def process_audio_file(
             segments, info = model.transcribe(
                 str(target_audio_for_whisper), 
                 word_timestamps=True,
-                language="en",
                 condition_on_previous_text=False,
                 vad_filter=True  # Optional but highly recommended to skip silence and prevent hallucinations
             )
