@@ -19,6 +19,12 @@ def queue_worker():
             
         state.active_task_id = task_id
         
+        # Check if the task was cancelled while sitting in the queue
+        if task_id in state.cancelled_tasks:
+            state.active_task_id = None
+            job_queue.task_done()
+            continue
+            
         tasks_status[task_id]["status"] = "processing"
         tasks_status[task_id]["start_time"] = time.time()
         save_db()
