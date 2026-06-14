@@ -35,8 +35,6 @@ export default function Navbar() {
           <div className="hidden md:flex items-center space-x-8">
             <Link href="/" className="text-sm font-medium hover:text-white transition-colors">Home</Link>
 
-            <Link href="/faq" className="text-sm font-medium text-gray-300 hover:text-white transition-colors">FAQ</Link>
-            <Link href="/contact" className="text-sm font-medium text-gray-300 hover:text-white transition-colors">Contact</Link>
           </div>
           
           {/* Search Box */}
@@ -111,8 +109,6 @@ export default function Navbar() {
           <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
             <Link href="/" onClick={() => setIsOpen(false)} className="text-[#E4E6EB] hover:text-white block px-3 py-2 rounded-md text-base font-medium">Home</Link>
 
-            <Link href="/faq" onClick={() => setIsOpen(false)} className="text-[#E4E6EB] hover:text-white block px-3 py-2 rounded-md text-base font-medium">FAQ</Link>
-            <Link href="/contact" onClick={() => setIsOpen(false)} className="text-[#E4E6EB] hover:text-white block px-3 py-2 rounded-md text-base font-medium">Contact</Link>
             
             <div className="px-3 py-3">
               <form onSubmit={handleSearch} className="w-full relative">
