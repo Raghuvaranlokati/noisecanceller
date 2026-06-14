@@ -3,7 +3,6 @@ from core.state import state
 from core.database import db_manager
 from services.audio_service import process_audio_file
 
-from services.email_service import send_completed_email
 
 def run_audio_processing(task_id: str, file_path: str, isolate_vocals: bool, isolate_instrumental: bool, four_stem: bool, enhance_speech: bool, stem_to_midi: bool, de_reverb: bool, lyric_sync: bool, separate_speakers: bool, user_email: str, metadata_csv_path: str = None):
     try:
@@ -38,9 +37,7 @@ def run_audio_processing(task_id: str, file_path: str, isolate_vocals: bool, iso
             "completed_time": time.time()
         })
         
-        if user_email:
-            send_completed_email(user_email, task_id)
-            
+
     except Exception as e:
         if str(e) == "Task cancelled by user":
             db_manager.upsert_task(task_id, {
