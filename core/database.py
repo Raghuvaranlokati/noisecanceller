@@ -142,4 +142,15 @@ class DatabaseManager:
             return self.get_user(email)
         return user
 
+    def fail_stuck_tasks(self):
+        """Marks any tasks stuck in 'queued' or 'processing' as failed when server restarts"""
+        with db_lock:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            cursor.execute(
+                "UPDATE tasks SET status = 'failed', message = 'Server restarted. Please try uploading again.' WHERE status IN ('queued', 'processing')"
+            )
+            conn.commit()
+            conn.close()
+
 db_manager = DatabaseManager()

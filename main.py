@@ -8,6 +8,7 @@ if sys.platform == 'win32':
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from core.worker import start_worker
+from core.database import db_manager
 from routers import audio, status
 
 app = FastAPI(title="Stemify AI API")
@@ -20,6 +21,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Fail any tasks that were stuck in memory during a server restart
+db_manager.fail_stuck_tasks()
 
 # Start global worker thread
 start_worker()
