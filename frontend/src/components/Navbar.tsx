@@ -24,9 +24,7 @@ export default function Navbar() {
           {/* Logo */}
           <div className="flex-shrink-0 flex items-center gap-8">
             <Link href="/" className="flex items-center gap-3 group">
-              <div className="w-10 h-10 bg-gradient-to-br from-[#1877F2] to-[#0A58CA] rounded-xl flex items-center justify-center shadow-[0_0_20px_rgba(24,119,242,0.3)] group-hover:scale-105 transition-transform">
-                <span className="font-bold text-white text-2xl tracking-tighter">V</span>
-              </div>
+              <img src="/logo.svg" alt="VocalHive Logo" className="w-10 h-10 group-hover:scale-105 transition-transform" />
               <span className="font-bold text-2xl tracking-tight text-[#E4E6EB]">VocalHive</span>
             </Link>
           </div>

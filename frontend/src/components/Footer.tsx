@@ -9,9 +9,7 @@ export default function Footer() {
           
           <div className="col-span-1 md:col-span-1">
             <div className="flex items-center gap-2 mb-6">
-              <div className="w-8 h-8 bg-[#1877F2] rounded-lg flex items-center justify-center">
-                <span className="font-bold text-white text-lg">V</span>
-              </div>
+              <img src="/logo.svg" alt="VocalHive Logo" className="w-8 h-8" />
               <span className="font-bold text-white text-xl tracking-tight">VocalHive</span>
             </div>
             <p className="text-gray-400 text-sm leading-relaxed max-w-xs">
