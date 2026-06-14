@@ -60,7 +60,7 @@ def process_audio_file(
             progress_callback(30, "Analyzing audio and isolating core stems (takes a few minutes)...")
             demucs_out = task_dir / "demucs_out"
             
-            cmd = ["python", "-m", "demucs.separate", "-n", "htdemucs", "--jobs", "1", "--segment", "10", str(downloaded_audio_path), "-o", str(demucs_out)]
+            cmd = ["python", "-m", "demucs.separate", "-n", "htdemucs", "-j", "1", str(downloaded_audio_path), "-o", str(demucs_out)]
             if not four_stem:
                 cmd.insert(5, "--two-stems")
                 cmd.insert(6, "vocals")
@@ -79,7 +79,12 @@ def process_audio_file(
                 )
                 state.active_processes[task_id] = process
                 
+                error_log = []
                 for line in process.stdout:
+                    error_log.append(line.strip())
+                    if len(error_log) > 20:
+                        error_log.pop(0)
+                        
                     if task_id in state.cancelled_tasks:
                         process.terminate()
                         raise Exception("Task cancelled by user")
@@ -93,7 +98,8 @@ def process_audio_file(
                         
                 process.wait()
                 if process.returncode != 0 and task_id not in state.cancelled_tasks:
-                    raise RuntimeError(f"Native Demucs processing failed. Code: {process.returncode}")
+                    log_str = " | ".join(error_log)
+                    raise RuntimeError(f"Native Demucs processing failed. Code: {process.returncode}. Log: {log_str}")
             except Exception as e:
                 if task_id in state.cancelled_tasks:
                     raise Exception("Task cancelled by user")
