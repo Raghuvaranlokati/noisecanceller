@@ -20,6 +20,7 @@ async def start_processing(
     de_reverb: str = Form("false"),
     lyric_sync: str = Form("false"),
     separate_speakers: str = Form("false"),
+    fast_mode: str = Form("true"),
     metadata_csv: UploadFile = File(None)
 ):
     if not file:
@@ -63,6 +64,7 @@ async def start_processing(
             de_reverb.lower() == "true", 
             lyric_sync.lower() == "true", 
             separate_speakers.lower() == "true", 
+            fast_mode.lower() == "true",
             email,
             metadata_csv_path
         )

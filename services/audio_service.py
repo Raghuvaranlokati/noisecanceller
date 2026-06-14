@@ -12,9 +12,19 @@ from audio_separator.separator import Separator
 from pyannote.audio import Pipeline
 from pydub import AudioSegment
 import torch
+import logging
 
 # Base directory for all temporary files during processing
 WORK_DIR = Path("temp_workdir")
+
+# Global singleton for fast MDX models to prevent reloading
+_global_separator = None
+
+def get_separator():
+    global _global_separator
+    if _global_separator is None:
+        _global_separator = Separator(log_level=logging.WARNING)
+    return _global_separator
 
 def process_audio_file(
     file_path: str, 
@@ -28,7 +38,8 @@ def process_audio_file(
     de_reverb: bool = False,
     lyric_sync: bool = False,
     separate_speakers: bool = False,
-    metadata_csv_path: str = None
+    metadata_csv_path: str = None,
+    fast_mode: bool = True
 ) -> str:
     """
     1. Converts uploaded file to WAV format.
@@ -55,77 +66,64 @@ def process_audio_file(
         final_dir.mkdir(exist_ok=True)
         shutil.copy(str(downloaded_audio_path), str(final_dir / "original.wav"))
         
-        # Step 2: Native Demucs Separation
+        # Step 2: Stem Separation
         if isolate_vocals or isolate_instrumental or four_stem:
             progress_callback(30, "Analyzing audio and isolating core stems (takes a few minutes)...")
-            demucs_out = task_dir / "demucs_out"
-            
-            cmd = ["python", "-m", "demucs.separate", "-n", "htdemucs", "-j", "1", str(downloaded_audio_path), "-o", str(demucs_out)]
-            if not four_stem:
-                cmd.insert(5, "--two-stems")
-                cmd.insert(6, "vocals")
-                
             from core.state import state
-            import re
             
+            # Check audio length for auto fallback
+            audio_duration = 0
             try:
-                process = subprocess.Popen(
-                    cmd, 
-                    stdout=subprocess.PIPE, 
-                    stderr=subprocess.STDOUT, 
-                    text=True, 
-                    bufsize=1, 
-                    universal_newlines=True
-                )
-                state.active_processes[task_id] = process
+                audio_info = AudioSegment.from_wav(str(downloaded_audio_path))
+                audio_duration = len(audio_info) / 1000.0  # in seconds
+            except:
+                pass
                 
-                error_log = []
-                for line in process.stdout:
-                    error_log.append(line.strip())
-                    if len(error_log) > 20:
-                        error_log.pop(0)
-                        
-                    if task_id in state.cancelled_tasks:
-                        process.terminate()
-                        raise Exception("Task cancelled by user")
-                        
-                    m = re.search(r'(\d+)%', line)
-                    if m:
-                        pct = int(m.group(1))
-                        # Map 0-100% to 30-70% of global progress
-                        mapped_pct = 30 + int(pct * 0.4)
-                        progress_callback(mapped_pct, f"Isolating stems ({pct}%)...")
-                        
-                process.wait()
-                if process.returncode != 0 and task_id not in state.cancelled_tasks:
-                    log_str = " | ".join(error_log)
-                    raise RuntimeError(f"Native Demucs processing failed. Code: {process.returncode}. Log: {log_str}")
-            except Exception as e:
-                if task_id in state.cancelled_tasks:
-                    raise Exception("Task cancelled by user")
-                raise RuntimeError(f"Native Demucs processing crashed. Error: {e}")
-            finally:
-                if task_id in state.active_processes:
-                    del state.active_processes[task_id]
+            if audio_duration > 600:
+                fast_mode = True # Force fast mode for > 10 min audio
                 
-            # Demucs outputs to: {demucs_out}/htdemucs/converted/{stem}.wav
-            demucs_converted_dir = demucs_out / "htdemucs" / "converted"
+            sep = get_separator()
+            sep.output_dir = str(final_dir)
+            sep.output_format = "WAV"
             
-            if four_stem:
-                if (demucs_converted_dir / "vocals.wav").exists():
-                    shutil.copy(str(demucs_converted_dir / "vocals.wav"), str(final_dir / "vocals.wav"))
-                if (demucs_converted_dir / "bass.wav").exists():
-                    shutil.copy(str(demucs_converted_dir / "bass.wav"), str(final_dir / "bass.wav"))
-                if (demucs_converted_dir / "drums.wav").exists():
-                    shutil.copy(str(demucs_converted_dir / "drums.wav"), str(final_dir / "drums.wav"))
-                if (demucs_converted_dir / "other.wav").exists():
-                    shutil.copy(str(demucs_converted_dir / "other.wav"), str(final_dir / "instrumental.wav"))
+            if fast_mode and not four_stem:
+                # FAST CPU MODE (MDX-Net via audio-separator)
+                progress_callback(40, "Running high-speed MDX-Net separation...")
+                # UVR-MDX-NET-Voc_FT is blazingly fast on CPU and highly accurate for Vocals vs Instrumental
+                sep.load_model(model_filename='UVR-MDX-NET-Voc_FT.onnx')
+                out_files = sep.separate(str(downloaded_audio_path))
+                
+                # audio-separator returns paths. UVR-MDX-NET-Voc_FT typically returns Instrumental and Vocals.
+                for f in out_files:
+                    f_name = os.path.basename(f).lower()
+                    if "vocals" in f_name or "vocal" in f_name:
+                        shutil.move(f, str(final_dir / "vocals.wav"))
+                    elif "instrumental" in f_name or "inst" in f_name:
+                        shutil.move(f, str(final_dir / "instrumental.wav"))
             else:
-                if (demucs_converted_dir / "vocals.wav").exists():
-                    shutil.copy(str(demucs_converted_dir / "vocals.wav"), str(final_dir / "vocals.wav"))
-                if (demucs_converted_dir / "no_vocals.wav").exists():
-                    shutil.copy(str(demucs_converted_dir / "no_vocals.wav"), str(final_dir / "instrumental.wav"))
-                    
+                # HIGH QUALITY MODE or 4-STEM MODE using MDX23C (best overall) or Demucs
+                progress_callback(40, "Running high-quality separation...")
+                if four_stem:
+                    sep.load_model(model_filename='htdemucs.yaml')
+                else:
+                    sep.load_model(model_filename='UVR-MDX-NET-Inst_HQ_3.onnx')
+                
+                out_files = sep.separate(str(downloaded_audio_path))
+                
+                for f in out_files:
+                    f_name = os.path.basename(f).lower()
+                    # Map htdemucs outputs to our expected names
+                    if "vocals" in f_name or "vocal" in f_name:
+                        shutil.move(f, str(final_dir / "vocals.wav"))
+                    elif "bass" in f_name:
+                        shutil.move(f, str(final_dir / "bass.wav"))
+                    elif "drums" in f_name:
+                        shutil.move(f, str(final_dir / "drums.wav"))
+                    elif "other" in f_name:
+                        shutil.move(f, str(final_dir / "instrumental.wav"))
+                    elif "instrumental" in f_name or "inst" in f_name:
+                        shutil.move(f, str(final_dir / "instrumental.wav"))
+                        
             import gc
             gc.collect()
         

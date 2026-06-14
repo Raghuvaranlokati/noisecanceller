@@ -4,7 +4,7 @@ from core.database import db_manager
 from services.audio_service import process_audio_file
 
 
-def run_audio_processing(task_id: str, file_path: str, isolate_vocals: bool, isolate_instrumental: bool, four_stem: bool, enhance_speech: bool, stem_to_midi: bool, de_reverb: bool, lyric_sync: bool, separate_speakers: bool, user_email: str, metadata_csv_path: str = None):
+def run_audio_processing(task_id: str, file_path: str, isolate_vocals: bool, isolate_instrumental: bool, four_stem: bool, enhance_speech: bool, stem_to_midi: bool, de_reverb: bool, lyric_sync: bool, separate_speakers: bool, user_email: str, metadata_csv_path: str = None, fast_mode: bool = True):
     try:
         def progress_callback(progress_percent, message, **kwargs):
             update_data = {
@@ -26,7 +26,8 @@ def run_audio_processing(task_id: str, file_path: str, isolate_vocals: bool, iso
             de_reverb=de_reverb,
             lyric_sync=lyric_sync,
             separate_speakers=separate_speakers,
-            metadata_csv_path=metadata_csv_path
+            metadata_csv_path=metadata_csv_path,
+            fast_mode=fast_mode
         )
         
         db_manager.upsert_task(task_id, {

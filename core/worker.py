@@ -42,10 +42,14 @@ def queue_worker():
                     if len(args) == 10:
                         file_path, isolate_vocals, isolate_instrumental, four_stem, enhance_speech, stem_to_midi, de_reverb, lyric_sync, separate_speakers, user_email = args
                         metadata_csv_path = None
-                    else:
+                        fast_mode = True
+                    elif len(args) == 11:
                         file_path, isolate_vocals, isolate_instrumental, four_stem, enhance_speech, stem_to_midi, de_reverb, lyric_sync, separate_speakers, user_email, metadata_csv_path = args
+                        fast_mode = True
+                    else:
+                        file_path, isolate_vocals, isolate_instrumental, four_stem, enhance_speech, stem_to_midi, de_reverb, lyric_sync, separate_speakers, fast_mode, user_email, metadata_csv_path = args
                         
-                run_audio_processing(task_id, file_path, isolate_vocals, isolate_instrumental, four_stem, enhance_speech, stem_to_midi, de_reverb, lyric_sync, separate_speakers, user_email, metadata_csv_path)
+                run_audio_processing(task_id, file_path, isolate_vocals, isolate_instrumental, four_stem, enhance_speech, stem_to_midi, de_reverb, lyric_sync, separate_speakers, user_email, metadata_csv_path, fast_mode)
             
             state.active_task_id = None
             job_queue.task_done()
