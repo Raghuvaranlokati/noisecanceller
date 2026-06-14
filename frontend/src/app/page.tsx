@@ -48,7 +48,7 @@ function HomeContent() {
       
       if (data.error) {
         eventSource.close();
-        setError(data.error === "Task not found" ? "Task expired or was cleaned from the server." : data.error);
+        setError(data.error === "Task not found" ? "This task is no longer available. The server restarts periodically to free up resources, which clears old files. Please upload your audio again." : data.error);
         setLoading(false);
         setTaskId(null);
         window.history.replaceState({}, '', '/');
@@ -80,7 +80,7 @@ function HomeContent() {
         setLoading(false);
       } else if (data.status === "cancelled" || data.status === "expired") {
         eventSource.close();
-        setError(data.status === "cancelled" ? "Processing was cancelled." : "Task expired or was cleaned from the server.");
+        setError(data.status === "cancelled" ? "Processing was cancelled." : "This task is no longer available. The server restarts periodically to free up resources, which clears old files. Please upload your audio again.");
         setLoading(false);
         setTaskId(null);
         window.history.replaceState({}, '', '/');
