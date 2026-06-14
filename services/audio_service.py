@@ -186,6 +186,9 @@ def process_audio_file(
             # Load full audio for slicing
             full_audio = AudioSegment.from_wav(str(target_audio_for_whisper))
             
+            timeline_markers = []
+            prev_end = 0.0
+            
             with open(srt_path, "w", encoding="utf-8") as f, open(dataset_metadata_path, "w", encoding="utf-8") as metadata_f:
                 for i, segment in enumerate(segments, start=1):
                     def format_time(seconds):
@@ -200,6 +203,22 @@ def process_audio_file(
                     f.write(f"{format_time(segment.start)} --> {format_time(segment.end)}\n")
                     text = segment.text.strip()
                     f.write(f"{text}\n\n")
+                    
+                    # Timeline markers
+                    if segment.start - prev_end > 2.0 and prev_end > 0:
+                        timeline_markers.append({
+                            "type": "silence",
+                            "start": prev_end,
+                            "end": segment.start,
+                            "duration": round(segment.start - prev_end, 2)
+                        })
+                    prev_end = segment.end
+                    timeline_markers.append({
+                        "type": "speech",
+                        "start": segment.start,
+                        "end": segment.end,
+                        "text": text
+                    })
                     
                     # Dataset Generation
                     start_ms = int(segment.start * 1000)
@@ -227,6 +246,11 @@ def process_audio_file(
                 writer.writerow(["word", "start", "end"])
                 for w in word_list:
                     writer.writerow([w["word"], w["start"], w["end"]])
+            
+            # Write Timeline Intelligence (Silence Detection)
+            timeline_path = final_dir / "timeline_markers.json"
+            with open(timeline_path, "w", encoding="utf-8") as tf:
+                json.dump({"markers": timeline_markers}, tf, indent=2)
 
         # Step 6: Stem-to-MIDI (Optional)
         if stem_to_midi:

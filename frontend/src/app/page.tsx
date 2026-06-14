@@ -6,6 +6,7 @@ import { UploadCloud, Music, AudioLines, Settings2, ShieldCheck, Zap, Lock, Slid
 import { db } from "../lib/firebase";
 import { collection, addDoc, getDocs, query, where, deleteDoc, doc, serverTimestamp, orderBy } from "firebase/firestore";
 import ExtractionFlowDiagram from "../components/ExtractionFlowDiagram";
+import SmartCompareStudio from "../components/SmartCompareStudio";
 import QueueWaitingRoom from "../components/QueueWaitingRoom";
 import SyncedTranscriptPlayer from "../components/SyncedTranscriptPlayer";
 import RawTranscriptViewer from "../components/RawTranscriptViewer";
@@ -719,39 +720,13 @@ function HomeContent() {
                   </div>
                 </div>
                 
-                <div className="bg-[#111] border border-[#27272a] rounded-2xl p-6 mb-8 w-full max-w-xl mx-auto">
-                  <div className="flex flex-col gap-4">
-                    <div className="flex items-center gap-4 bg-black/50 p-3 rounded-xl border border-white/5">
-                      <div className="w-28 font-bold text-[#1877F2] text-sm md:text-base">🎤 Vocals</div>
-                      <audio ref={vocalsAudioRef} controls src={`${baseUrl}/api/stream/${taskId}/vocals.wav`} preload="none" className="flex-1 h-10 rounded-lg">
-                        <track kind="captions" />
-                      </audio>
-                    </div>
-                    
-                    <div className="flex items-center gap-4 bg-black/50 p-3 rounded-xl border border-white/5">
-                      <div className="w-28 font-bold text-gray-300 text-sm md:text-base">🎸 Instrument</div>
-                      <audio controls src={`${baseUrl}/api/stream/${taskId}/instrumental.wav`} preload="none" className="flex-1 h-10 rounded-lg">
-                        <track kind="captions" />
-                      </audio>
-                    </div>
-                    
-                    {fourStem && (
-                      <>
-                        <div className="flex items-center gap-4 bg-black/50 p-3 rounded-xl border border-white/5">
-                          <div className="w-28 font-bold text-orange-400 text-sm md:text-base">🥁 Drums</div>
-                          <audio controls src={`${baseUrl}/api/stream/${taskId}/drums.wav`} preload="none" className="flex-1 h-10 rounded-lg">
-                            <track kind="captions" />
-                          </audio>
-                        </div>
-                        <div className="flex items-center gap-4 bg-black/50 p-3 rounded-xl border border-white/5">
-                          <div className="w-28 font-bold text-blue-400 text-sm md:text-base">🎸 Bass</div>
-                          <audio controls src={`${baseUrl}/api/stream/${taskId}/bass.wav`} preload="none" className="flex-1 h-10 rounded-lg">
-                            <track kind="captions" />
-                          </audio>
-                        </div>
-                      </>
-                    )}
-                  </div>
+                <div className="mb-8 w-full max-w-2xl mx-auto">
+                  <audio ref={vocalsAudioRef} src={`${baseUrl}/api/stream/${taskId}/vocals.wav`} preload="none" className="hidden" />
+                  <SmartCompareStudio 
+                    originalUrl={`${baseUrl}/api/stream/${taskId}/original.wav`}
+                    cleanedUrl={`${baseUrl}/api/stream/${taskId}/vocals.wav`}
+                    audioRef={vocalsAudioRef}
+                  />
                 </div>
 
                 {lyricSync && <SyncedTranscriptPlayer taskId={taskId} baseUrl={baseUrl} audioRef={vocalsAudioRef} />}
