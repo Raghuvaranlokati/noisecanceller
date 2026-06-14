@@ -1,0 +1,122 @@
+export interface FAQ {
+  id: number;
+  category: string;
+  question: string;
+  answer: string;
+}
+
+export const faqs: FAQ[] = [
+  // Section 1: General Information & Basics
+  { id: 1, category: "General", question: "What is VocalBee?", answer: "VocalBee is an advanced AI-powered audio processing tool designed to instantly extract vocals, remove background noise, and separate instrument stems from any audio or video file." },
+  { id: 2, category: "General", question: "Is VocalBee free to use?", answer: "Yes, VocalBee offers a generous free tier that allows you to extract vocals and separate stems from standard-length audio files without paying." },
+  { id: 3, category: "General", question: "Do I need to create an account to use VocalBee?", answer: "Yes, you must sign up for a free account to ensure secure processing and to access your personal task history." },
+  { id: 4, category: "General", question: "Is VocalBee a web-based app or software I download?", answer: "VocalBee is entirely web-based. You don't need to download any software; all processing is handled on our powerful cloud servers." },
+  { id: 5, category: "General", question: "Does VocalBee work on mobile devices?", answer: "Yes, VocalBee is fully responsive and works directly within your mobile browser on iOS and Android." },
+  { id: 6, category: "General", question: "Who is VocalBee built for?", answer: "It is built for DJs, music producers, karaoke enthusiasts, video editors, podcasters, and anyone needing clean audio extraction." },
+  { id: 7, category: "General", question: "What makes VocalBee better than other vocal removers?", answer: "VocalBee uses next-generation deep learning models that minimize artifacting and preserve the original frequencies of the audio, delivering studio-grade results." },
+  { id: 8, category: "General", question: "Can I use VocalBee for commercial projects?", answer: "Yes, the stems you generate are yours to use, provided you have the legal right to use the original source material." },
+  { id: 9, category: "General", question: "How accurate is the vocal extraction?", answer: "Our AI achieves near-perfect isolation on most modern studio recordings, cleanly separating vocals from heavy bass and dense instrumentation." },
+  { id: 10, category: "General", question: "Do you support multiple languages?", answer: "The VocalBee website interface is in English, but the AI extracts vocals perfectly regardless of the language being spoken or sung." },
+
+  // Section 2: Audio & File Formats
+  { id: 11, category: "Formats", question: "What file formats can I upload?", answer: "We support all major audio and video formats including MP3, WAV, FLAC, M4A, OGG, MP4, and MKV." },
+  { id: 12, category: "Formats", question: "What format are the separated stems downloaded in?", answer: "Free users receive high-quality MP3 downloads. Pro users can download uncompressed WAV files." },
+  { id: 13, category: "Formats", question: "Is there a file size limit for uploads?", answer: "Yes, free users have a maximum upload limit per file (typically 50MB), while Pro users enjoy significantly higher limits." },
+  { id: 14, category: "Formats", question: "Is there a length limit for the audio?", answer: "Free accounts can process tracks up to 10 minutes long. Pro accounts can process hour-long podcasts or DJ mixes." },
+  { id: 15, category: "Formats", question: "Can I upload a video file directly?", answer: "Yes, you can upload an MP4 or MOV file, and VocalBee will automatically extract the audio and split it for you." },
+  { id: 16, category: "Formats", question: "Does VocalBee compress my audio?", answer: "If you download in MP3 format, standard compression applies. For zero compression, upgrade to Pro and download as WAV." },
+  { id: 17, category: "Formats", question: "Can I upload multiple files at once?", answer: "Currently, you can upload files sequentially to your personal task queue. Bulk processing is available via our API." },
+  { id: 18, category: "Formats", question: "Why was my file rejected?", answer: "Files are typically rejected if they are corrupted, password-protected, or exceed your current tier's size limit." },
+  { id: 19, category: "Formats", question: "Can I convert an MP4 to an MP3 using VocalBee?", answer: "Yes, simply upload the video and download the 'Instrumental' or 'Vocal' stem as an MP3." },
+  { id: 20, category: "Formats", question: "Does the AI struggle with low-quality audio?", answer: "While our AI is excellent at enhancing audio, heavily distorted or low-bitrate source files will yield lower-quality stems than high-definition WAV files." },
+
+  // Section 3: Stem Separation & Features
+  { id: 21, category: "Features", question: "What is stem separation?", answer: "Stem separation is the process of breaking a mixed song back down into its individual components (e.g., Vocals, Drums, Bass, Other)." },
+  { id: 22, category: "Features", question: "How many stems can VocalBee split a song into?", answer: "We offer 2-stem (Vocals/Instrumental) and 4-stem (Vocals/Drums/Bass/Other) separation options." },
+  { id: 23, category: "Features", question: "Can I isolate only the drums?", answer: "Yes, using our 4-stem separation, you will receive a dedicated audio file containing only the drum track." },
+  { id: 24, category: "Features", question: "Can I isolate only the bassline?", answer: "Yes, the 4-stem model perfectly isolates the bass guitar or synth bass from the rest of the track." },
+  { id: 25, category: "Features", question: "What does 'Other' mean in 4-stem separation?", answer: "'Other' includes everything that isn't vocals, drums, or bass—such as guitars, synths, pianos, and atmospheric effects." },
+  { id: 26, category: "Features", question: "How do I make a karaoke track?", answer: "Upload your song and choose 2-stem separation. Download the 'Instrumental' track to get a perfect karaoke version." },
+  { id: 27, category: "Features", question: "How do I get an acapella?", answer: "Upload your song and choose 2-stem separation. Download the 'Vocals' track for a clean acapella." },
+  { id: 28, category: "Features", question: "Does VocalBee remove background noise from voice recordings?", answer: "Yes, our AI excels at isolating the human voice and stripping away background static, wind, or room noise." },
+  { id: 29, category: "Features", question: "Can I use VocalBee to clean up a podcast interview?", answer: "Absolutely. Upload the podcast, and the AI will remove background interference, leaving crisp dialogue." },
+  { id: 30, category: "Features", question: "Will stem separation remove the reverb from vocals?", answer: "Our models generally keep the spatial effects (like reverb) attached to the vocal track to maintain a natural sound." },
+  { id: 31, category: "Features", question: "Can it separate multiple singers?", answer: "It will extract all vocals onto a single vocal stem. It does not currently separate Singer A from Singer B on different stems." },
+  { id: 32, category: "Features", question: "Can it separate dialogue from a movie scene?", answer: "Yes, it will extract spoken dialogue as the 'Vocal' track and push sound effects and music to the 'Instrumental' track." },
+  { id: 33, category: "Features", question: "Does it work on live concert recordings?", answer: "Yes, though the crowd noise is usually pushed to the 'Instrumental' or 'Other' track depending on the frequency." },
+  { id: 34, category: "Features", question: "Can I separate individual guitar and piano tracks?", answer: "Currently, guitars and pianos are grouped together in the 'Other' stem. We are developing 6-stem models for the future." },
+  { id: 35, category: "Features", question: "Why do I hear a slight underwater sound in my stems?", answer: "This is a rare artifact caused when the AI tries to separate heavily compressed or overlapping frequencies. Using high-quality WAV files prevents this." },
+  { id: 36, category: "Features", question: "Can VocalBee remove metronome/click tracks?", answer: "Yes, click tracks are typically pushed to the 'Drums' or 'Other' stem, leaving your vocals clean." },
+  { id: 37, category: "Features", question: "Can I preview the stems before downloading?", answer: "Yes, our web interface includes a built-in multi-track player where you can solo, mute, and mix the stems." },
+  { id: 38, category: "Features", question: "Can I adjust the volume of the stems and export a new mix?", answer: "You can preview the mix on the site, but to export a custom mix, you must download the stems and combine them in your own DAW." },
+  { id: 39, category: "Features", question: "Is the vocal extraction completely lossless?", answer: "AI separation involves mathematical reconstruction, so it is never 100% physically lossless, but our Pro WAV outputs are perceptually flawless." },
+  { id: 40, category: "Features", question: "How often are the AI models updated?", answer: "We continuously train and deploy new models. You will always have access to our latest, most advanced architecture." },
+
+  // Section 4: Privacy & Security
+  { id: 41, category: "Security", question: "Are my uploaded files secure?", answer: "Yes, all uploads and downloads are encrypted using industry-standard SSL/TLS." },
+  { id: 42, category: "Security", question: "Does VocalBee listen to or use my audio?", answer: "We respect your privacy. We do not listen to your audio or use your private uploads to train our models without consent." },
+  { id: 43, category: "Security", question: "How long are my files stored on the server?", answer: "Files are temporarily stored for processing and are automatically permanently deleted from our servers after 24 hours." },
+  { id: 44, category: "Security", question: "Can anyone else see my tasks?", answer: "No. Your task queue is strictly linked to your authenticated user account." },
+  { id: 45, category: "Security", question: "What happens to my data if I delete my account?", answer: "All associated data, task histories, and files are immediately and permanently wiped from our databases." },
+  { id: 46, category: "Security", question: "Is VocalBee GDPR compliant?", answer: "Yes, we adhere to strict data protection regulations for our European users." },
+  { id: 47, category: "Security", question: "Do you claim copyright over the generated stems?", answer: "No. VocalBee does not claim any ownership over the audio you process through our platform." },
+  { id: 48, category: "Security", question: "Is my payment information safe?", answer: "All payments are handled securely by Stripe; VocalBee never sees or stores your credit card details." },
+  { id: 49, category: "Security", question: "Can I force-delete a task before the 24-hour limit?", answer: "Yes, you can manually delete any task from your dashboard, which wipes the files instantly." },
+  { id: 50, category: "Security", question: "Are API requests logged?", answer: "API metadata is logged for billing purposes, but the audio payloads are deleted immediately after the response is sent." },
+
+  // Section 5: Troubleshooting & Support
+  { id: 51, category: "Support", question: "Why is my upload stuck at 0%?", answer: "This is usually due to a poor internet connection or a strict firewall. Try refreshing the page or disabling your VPN." },
+  { id: 52, category: "Support", question: "Why is the processing taking so long?", answer: "Processing times depend on file length and server load. A standard 3-minute song takes about 30 seconds to process." },
+  { id: 53, category: "Support", question: "My task says 'Failed'. What do I do?", answer: "A failure usually indicates an unreadable file format or a corrupted audio file. Try converting your file to an MP3 and uploading it again." },
+  { id: 54, category: "Support", question: "I accidentally closed the tab while it was processing!", answer: "Don't worry! VocalBee uses a persistent background queue. Just log back in, go to 'Your Tasks', and your stems will be waiting for you." },
+  { id: 55, category: "Support", question: "The vocals still have some drums in them. Why?", answer: "If the original track has heavy distortion or very aggressive compression linking the drums and vocals, separation can be difficult." },
+  { id: 56, category: "Support", question: "I can't log into my account.", answer: "Please ensure you are using the correct login provider (e.g., Google or Email). Try clearing your browser cookies if the issue persists." },
+  { id: 57, category: "Support", question: "I downloaded the ZIP file but I can't open it.", answer: "You need a program like WinRAR, 7-Zip, or the built-in extractor on Mac/Windows to unzip the downloaded stems." },
+  { id: 58, category: "Support", question: "The website looks broken on my phone.", answer: "VocalBee requires a modern browser. Ensure Safari or Chrome is updated to the latest version on your mobile device." },
+  { id: 59, category: "Support", question: "Why did I receive an 'exceeded limit' error?", answer: "You have reached the maximum number of free processing minutes for the day. Wait 24 hours or upgrade to Pro." },
+  { id: 60, category: "Support", question: "Can I get a refund if the separation isn't perfect?", answer: "We highly recommend testing our free tier to ensure the quality meets your standards before upgrading to Pro, as AI results vary based on the input audio." },
+  { id: 61, category: "Support", question: "Where do I report a bug?", answer: "You can report bugs by emailing our support team at support@vocalbee.vercel.app." },
+  { id: 62, category: "Support", question: "How do I contact customer service?", answer: "Pro users have access to priority email support via their dashboard." },
+  { id: 63, category: "Support", question: "Does VocalBee have a Discord community?", answer: "Yes! You can find the link to our community server in the website footer." },
+  { id: 64, category: "Support", question: "The audio player isn't making any sound.", answer: "Check your device volume, ensure your browser hasn't muted the tab, and make sure the stem isn't 'Muted' in the player UI." },
+  { id: 65, category: "Support", question: "Why are the downloaded files empty?", answer: "If an extraction fails silently, it may generate a 0kb file. Please delete the task and try uploading the file again." },
+
+  // Section 6: Pricing, Subscriptions & Limits
+  { id: 66, category: "Pricing", question: "What is included in the Free tier?", answer: "The free tier includes unlimited 2-stem extractions for files under 10 minutes, MP3 downloads, and standard processing speed." },
+  { id: 67, category: "Pricing", question: "What is VocalBee Pro?", answer: "VocalBee Pro is our premium subscription offering faster processing, 4-stem separation, WAV downloads, and larger file limits." },
+  { id: 68, category: "Pricing", question: "How much does VocalBee Pro cost?", answer: "Pricing varies by region, but it typically starts at $9.99/month. Check our Pricing page for exact details." },
+  { id: 69, category: "Pricing", question: "Can I pay annually?", answer: "Yes, we offer an annual billing cycle that gives you a 20% discount compared to paying monthly." },
+  { id: 70, category: "Pricing", question: "What payment methods do you accept?", answer: "We accept all major credit cards, debit cards, Apple Pay, and Google Pay via Stripe." },
+  { id: 71, category: "Pricing", question: "Can I cancel my subscription at any time?", answer: "Yes, you can cancel your subscription from your account settings at any time. You will retain Pro access until the end of your billing cycle." },
+  { id: 72, category: "Pricing", question: "If I cancel, do I lose my downloaded files?", answer: "No, any files you have already downloaded to your computer are yours forever." },
+  { id: 73, category: "Pricing", question: "Do free unused minutes roll over to the next day?", answer: "No, daily free usage limits reset every 24 hours." },
+  { id: 74, category: "Pricing", question: "Is there a lifetime license?", answer: "Currently, VocalBee operates purely on a subscription model to cover ongoing cloud computing costs." },
+  { id: 75, category: "Pricing", question: "Do you offer student discounts?", answer: "Yes, we offer a 50% discount for verified students. Contact support from a .edu email address." },
+  { id: 76, category: "Pricing", question: "What is the maximum file length for Pro users?", answer: "Pro users can process individual files up to 120 minutes long." },
+  { id: 77, category: "Pricing", question: "Do Pro users get faster processing?", answer: "Yes, Pro tasks are routed to a priority GPU queue, making extractions up to 3x faster." },
+  { id: 78, category: "Pricing", question: "Can I share my Pro account with my team?", answer: "Pro accounts are for individual use. Concurrent logins from multiple IP addresses may trigger security locks." },
+  { id: 79, category: "Pricing", question: "How do I upgrade my account?", answer: "Simply click the 'Upgrade' button in the navbar or visit the Pricing page while logged in." },
+  { id: 80, category: "Pricing", question: "How do I update my credit card information?", answer: "Go to Account Settings > Billing to manage your payment methods via the Stripe Customer Portal." },
+
+  // Section 7: API Integration & Developers
+  { id: 81, category: "API", question: "Does VocalBee have an API?", answer: "Yes, we offer a robust REST API for developers looking to integrate audio separation into their own apps." },
+  { id: 82, category: "API", question: "Who uses the VocalBee API?", answer: "Music apps, karaoke platforms, podcast editors, and transcription services use our API to automate audio cleanup." },
+  { id: 83, category: "API", question: "How is the API priced?", answer: "The API is priced on a pay-as-you-go model per minute of audio processed." },
+  { id: 84, category: "API", question: "How do I get an API key?", answer: "You can generate an API key from the Developer section of your account dashboard after adding a payment method." },
+  { id: 85, category: "API", question: "What is the rate limit for the API?", answer: "The standard rate limit is 60 requests per minute, but this can be increased for Enterprise clients." },
+  { id: 86, category: "API", question: "Does the API support 4-stem separation?", answer: "Yes, the API supports both 2-stem and 4-stem parameters." },
+  { id: 87, category: "API", question: "How do I send files to the API?", answer: "You can POST audio files directly as multipart/form-data or provide a public URL for our servers to fetch the audio." },
+  { id: 88, category: "API", question: "How do I receive the stems from the API?", answer: "The API returns temporary, signed URLs where you can download the resulting stem files." },
+  { id: 89, category: "API", question: "Do you support Webhooks?", answer: "Yes, you can configure webhooks to receive a POST request as soon as a background processing task completes." },
+  { id: 90, category: "API", question: "Is there an official Python SDK?", answer: "We currently provide comprehensive cURL examples, and an official Python SDK is in active development." },
+  { id: 91, category: "API", question: "Is there a NodeJS SDK?", answer: "Yes, a community-supported NodeJS wrapper is available on NPM." },
+  { id: 92, category: "API", question: "Can I use the API for a commercial application?", answer: "Yes, commercial use is fully permitted under our API Terms of Service." },
+  { id: 93, category: "API", question: "What happens if an API request fails?", answer: "If an extraction fails, the API will return a 4xx or 5xx HTTP status code, and you will not be billed for that minute." },
+  { id: 94, category: "API", question: "Are API keys tied to my Pro subscription?", answer: "No, API usage is billed separately from the consumer Pro subscription." },
+  { id: 95, category: "API", question: "Can I monitor my API usage?", answer: "Yes, a live dashboard showing request volume, success rates, and accumulated costs is available in the Developer portal." },
+  { id: 96, category: "API", question: "How secure is the API?", answer: "The API requires Bearer Token authentication over HTTPS. You can also restrict API key usage to specific IP addresses." },
+  { id: 97, category: "API", question: "Can I test the API for free?", answer: "Yes, every new developer account receives $5 in free testing credits." },
+  { id: 98, category: "API", question: "Does the API support batch processing?", answer: "Yes, you can submit an array of URLs in a single request for asynchronous batch processing." },
+  { id: 99, category: "API", question: "How long are API result URLs valid?", answer: "Signed download URLs returned by the API expire after 60 minutes for security reasons." },
+  { id: 100, category: "API", question: "Do you offer Enterprise SLAs for the API?", answer: "Yes, for high-volume customers (10,000+ minutes/month), we offer dedicated GPU clusters and 99.9% uptime SLAs. Contact sales for details." }
+];

@@ -10,6 +10,9 @@ import SmartCompareStudio from "../components/SmartCompareStudio";
 import QueueWaitingRoom from "../components/QueueWaitingRoom";
 import SyncedTranscriptPlayer from "../components/SyncedTranscriptPlayer";
 import RawTranscriptViewer from "../components/RawTranscriptViewer";
+import FAQAccordion from "../components/FAQAccordion";
+import { faqs } from "../data/faqs";
+import Link from "next/link";
 
 function HomeContent() {
   const [file, setFile] = useState<File | null>(null);
@@ -943,6 +946,20 @@ function HomeContent() {
             <h3 className="text-xl font-bold text-white mb-2">100% Secure</h3>
             <p className="text-gray-400 text-sm">Your files are encrypted during upload and permanently deleted after processing.</p>
           </div>
+        </div>
+      </div>
+
+      {/* FAQ Section on Homepage */}
+      <div className="max-w-4xl mx-auto px-4 mt-32 mb-10">
+        <div className="text-center mb-12">
+          <h2 className="text-3xl md:text-5xl font-bold text-white mb-4">Frequently Asked Questions</h2>
+          <p className="text-gray-400 text-lg">Quick answers to common questions about VocalBee.</p>
+        </div>
+        <FAQAccordion faqs={faqs.slice(0, 10)} />
+        <div className="text-center mt-10">
+          <Link href="/faq" className="text-[#1877F2] hover:text-white transition-colors font-medium text-lg">
+            View all 100 FAQs &rarr;
+          </Link>
         </div>
       </div>
 
