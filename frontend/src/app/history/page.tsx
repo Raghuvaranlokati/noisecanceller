@@ -14,6 +14,22 @@ function TaskStatusRow({ item, onDelete }: { item: any, onDelete: (id: string) =
   const [copied, setCopied] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  const getActiveTools = (opts: any) => {
+    if (!opts) return [];
+    const active = [];
+    if (opts.isolateVocals) active.push("Vocals");
+    if (opts.isolateInstrumental) active.push("Instrumental");
+    if (opts.fourStem) active.push("4-Stem");
+    if (opts.enhance) active.push("Enhance");
+    if (opts.stemToMidi) active.push("MIDI");
+    if (opts.deReverb) active.push("De-Reverb");
+    if (opts.lyricSync) active.push("Lyrics");
+    if (opts.separateSpeakers) active.push("Speakers");
+    return active;
+  };
+
+  const activeTools = getActiveTools(item.options);
+
   const handleCopy = () => {
     navigator.clipboard.writeText(item.taskId);
     setCopied(true);
@@ -104,6 +120,16 @@ function TaskStatusRow({ item, onDelete }: { item: any, onDelete: (id: string) =
             <span className="hidden sm:inline">• {new Date(item.createdAt.toMillis()).toLocaleString()}</span>
           )}
         </div>
+        
+        {activeTools.length > 0 && (
+          <div className="flex flex-wrap gap-2 mt-3">
+            {activeTools.map((tool: string, idx: number) => (
+              <span key={idx} className="text-[10px] px-2 py-1 rounded-md bg-[#27272a]/50 text-gray-400 border border-[#27272a]">
+                {tool}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
       
       <div className="flex items-center gap-2">

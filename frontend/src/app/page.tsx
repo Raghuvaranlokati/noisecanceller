@@ -230,7 +230,17 @@ function HomeContent() {
             taskId: data.task_id,
             email: user.primaryEmailAddress.emailAddress,
             filename: file.name,
-            createdAt: serverTimestamp()
+            createdAt: serverTimestamp(),
+            options: {
+              isolateVocals,
+              isolateInstrumental,
+              fourStem,
+              enhance,
+              stemToMidi,
+              deReverb,
+              lyricSync,
+              separateSpeakers
+            }
           });
         } catch (fbErr) {
           console.error("Failed to save to Firebase history:", fbErr);
