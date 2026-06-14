@@ -19,9 +19,9 @@ export default function SignInPage() {
         {/* Graphic */}
         <div className="relative z-10 flex flex-col items-center justify-center p-12 text-center max-w-lg">
           <div className="w-24 h-24 bg-[#1877F2] rounded-2xl flex items-center justify-center mb-8 shadow-[0_0_40px_rgba(24,119,242,0.4)]">
-            <span className="font-bold text-white text-5xl">S</span>
+            <span className="font-bold text-white text-5xl">V</span>
           </div>
-          <h1 className="text-4xl font-bold text-white mb-4">Welcome back to Stemify AI</h1>
+          <h1 className="text-4xl font-bold text-white mb-4">Welcome back to VocalHive</h1>
           <p className="text-xl text-gray-400 leading-relaxed">
             The world&apos;s most powerful AI vocal extractor and stem separation engine. Log in to continue splitting tracks.
           </p>
