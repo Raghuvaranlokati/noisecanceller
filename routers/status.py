@@ -199,3 +199,28 @@ async def stream_audio(task_id: str, filename: str):
         media_type = "text/plain"
         
     return FileResponse(file_path, media_type=media_type)
+
+@router.get("/user/latest_task")
+async def get_user_latest_task(email: str):
+    task = db_manager.get_latest_task_for_user(email)
+    if not task:
+        raise HTTPException(status_code=404, detail="No tasks found for user")
+    
+    # Optional: if it's queued, also add queue position
+    if task.get("status") == "queued":
+        pos = 1
+        for job in list(job_queue.queue):
+            if isinstance(job, dict):
+                job_id = job.get("task_id")
+            else:
+                job_id = job[0]
+                
+            if job_id == task["task_id"]:
+                break
+            pos += 1
+            
+        task["queue_position"] = pos
+        task["eta_seconds"] = pos * 180 + (180 if state.active_task_id else 0)
+        task["message"] = f"Waiting in queue... Position: {pos}"
+        
+    return task

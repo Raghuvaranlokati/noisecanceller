@@ -120,6 +120,34 @@ function HomeContent() {
       setTimeout(() => setUserEmail(savedEmail), 0);
     }
   }, []);
+
+  // Auto-restore latest task on login/refresh
+  useEffect(() => {
+    const email = user?.primaryEmailAddress?.emailAddress;
+    if (email && !taskId && !loading && !resultZip && !searchParams.get('taskId')) {
+      const fetchLatestTask = async () => {
+        try {
+          const res = await fetch(`${baseUrl}/api/user/latest_task?email=${encodeURIComponent(email)}`);
+          if (res.ok) {
+            const task = await res.json();
+            setTaskId(task.task_id);
+            if (task.status === "completed") {
+              setResultZip(task.result_path || true);
+              setProgress({ step: "Complete", percent: 100, message: "Ready to download!", chunks_total: 0, chunks_completed: 0, chunks_pending: 0, start_time: 0, eta_seconds: 0, completed_time: 0, queue_position: 0 } as any);
+            } else if (task.status === "failed" || task.status === "cancelled") {
+              setError(task.message || "Previous task failed or was cancelled.");
+            } else {
+              setLoading(true);
+              pollProgress(task.task_id);
+            }
+          }
+        } catch (err) {
+          console.error("Failed to restore latest task", err);
+        }
+      };
+      fetchLatestTask();
+    }
+  }, [user?.primaryEmailAddress?.emailAddress, taskId, loading, resultZip, searchParams, pollProgress, baseUrl]);
   
   // Feature Toggles
   const [isolateVocals, setIsolateVocals] = useState<boolean>(true);

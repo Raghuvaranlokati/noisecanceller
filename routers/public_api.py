@@ -44,6 +44,7 @@ async def public_process(
         "progress": 0,
         "message": "Placed in queue via API...",
         "created_at": time.time(),
+        "user_email": user["email"],
         "metadata": {"filename": file.filename, "source": "public_api"}
     })
     

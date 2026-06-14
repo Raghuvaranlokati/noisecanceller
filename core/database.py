@@ -153,4 +153,21 @@ class DatabaseManager:
             conn.commit()
             conn.close()
 
+    def get_latest_task_for_user(self, email: str):
+        with db_lock:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM tasks WHERE user_email = ? ORDER BY created_at DESC LIMIT 1", (email,))
+            row = cursor.fetchone()
+            conn.close()
+            if row:
+                d = dict(row)
+                if d.get("metadata"):
+                    try:
+                        d["metadata"] = json.loads(d["metadata"])
+                    except:
+                        pass
+                return d
+            return None
+
 db_manager = DatabaseManager()

@@ -37,6 +37,7 @@ async def start_processing(
         "progress": 0,
         "message": "Placed in queue...",
         "created_at": time.time(),
+        "user_email": email,
         "metadata": {"filename": file.filename}
     })
     
