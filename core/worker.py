@@ -1,6 +1,7 @@
 import time
 import threading
-from core.state import job_queue, tasks_status, save_db, state
+from core.state import job_queue, state
+from core.database import db_manager
 from core.tasks import run_audio_processing
 
 def queue_worker():
@@ -25,9 +26,10 @@ def queue_worker():
             job_queue.task_done()
             continue
             
-        tasks_status[task_id]["status"] = "processing"
-        tasks_status[task_id]["start_time"] = time.time()
-        save_db()
+        db_manager.upsert_task(task_id, {
+            "status": "processing",
+            "start_time": time.time()
+        })
         
         if task_type == "audio":
             if isinstance(job, tuple):

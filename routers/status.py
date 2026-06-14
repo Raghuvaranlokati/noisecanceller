@@ -2,18 +2,60 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
 import os
 import time
-from core.state import job_queue, tasks_status, state, save_db
+import json
+import asyncio
+from fastapi.responses import FileResponse, StreamingResponse
+from core.state import job_queue, state
+from core.database import db_manager
 
 router = APIRouter(prefix="/api")
 
+@router.get("/events/status/{task_id}")
+async def events_status(task_id: str):
+    async def event_generator():
+        last_data = None
+        while True:
+            task = db_manager.get_task(task_id)
+            if not task:
+                yield f"data: {json.dumps({'error': 'Task not found'})}\n\n"
+                break
+                
+            if task["status"] == "queued":
+                # Calculate queue position
+                pos = 1
+                for job in list(job_queue.queue):
+                    if isinstance(job, dict):
+                        job_id = job.get("task_id")
+                    else:
+                        job_id = job[0]
+                        
+                    if job_id == task_id:
+                        break
+                    pos += 1
+                
+                task["queue_position"] = pos
+                task["eta_seconds"] = pos * 180 + (180 if state.active_task_id else 0)
+                task["message"] = f"Waiting in queue... Position: {pos}"
+                
+            # Only send if changed to reduce bandwidth
+            if str(task) != str(last_data):
+                yield f"data: {json.dumps(task)}\n\n"
+                last_data = task
+                
+            if task["status"] in ["completed", "failed", "cancelled"]:
+                break
+                
+            await asyncio.sleep(1)
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
+
 @router.post("/cancel/{task_id}")
 async def cancel_task(task_id: str):
-    if task_id not in tasks_status:
+    task = db_manager.get_task(task_id)
+    if not task:
         raise HTTPException(status_code=404, detail="Task not found")
         
-    status_data = tasks_status[task_id]
-    
-    if status_data["status"] == "completed":
+    if task["status"] == "completed":
         raise HTTPException(status_code=400, detail="Task already completed")
         
     state.cancelled_tasks.add(task_id)
@@ -27,33 +69,34 @@ async def cancel_task(task_id: str):
             except Exception:
                 pass
                 
-    if status_data["status"] == "queued":
-        status_data["status"] = "cancelled"
-        status_data["message"] = "Task cancelled by user"
-        save_db()
+    if task["status"] == "queued":
+        db_manager.upsert_task(task_id, {
+            "status": "cancelled",
+            "message": "Task cancelled by user"
+        })
         
     return {"status": "cancelled"}
 
 @router.get("/status/{task_id}")
 async def get_status(task_id: str):
-    if task_id not in tasks_status:
+    task = db_manager.get_task(task_id)
+    if not task:
         # Check if it exists on disk (rehydration after server restart)
         final_stems_dir = os.path.join("temp_workdir", task_id, "final_stems")
         if os.path.exists(final_stems_dir):
-            tasks_status[task_id] = {
+            task = {
                 "status": "completed",
                 "progress": 100,
                 "message": "Recovered from disk",
-                "result_path": os.path.join("temp_workdir", task_id, f"custom_stems_{task_id}.zip"), # Might not exist, but custom_download recreates anyway
+                "result_path": os.path.join("temp_workdir", task_id, f"custom_stems_{task_id}.zip"),
                 "start_time": time.time(),
                 "completed_time": time.time()
             }
+            db_manager.upsert_task(task_id, task)
         else:
             raise HTTPException(status_code=404, detail="Task not found")
-        
-    status_data = tasks_status[task_id].copy()
-    
-    if status_data["status"] == "queued":
+            
+    if task["status"] == "queued":
         # Calculate queue position
         pos = 1
         for job in list(job_queue.queue):
@@ -66,19 +109,19 @@ async def get_status(task_id: str):
                 break
             pos += 1
         
-        status_data["queue_position"] = pos
-        status_data["eta_seconds"] = pos * 180 + (180 if state.active_task_id else 0)
-        status_data["message"] = f"Waiting in queue... Position: {pos}"
+        task["queue_position"] = pos
+        task["eta_seconds"] = pos * 180 + (180 if state.active_task_id else 0)
+        task["message"] = f"Waiting in queue... Position: {pos}"
         
-    return status_data
+    return task
 
 @router.get("/download/{task_id}")
 async def download_result(task_id: str):
-    if task_id not in tasks_status:
+    task = db_manager.get_task(task_id)
+    if not task:
         raise HTTPException(status_code=404, detail="Task not found")
         
-    task = tasks_status[task_id]
-    if task["status"] != "completed" or not task["result_path"]:
+    if task["status"] != "completed" or not task.get("result_path"):
         raise HTTPException(status_code=400, detail="Task not completed yet")
         
     file_path = task["result_path"]
@@ -105,10 +148,10 @@ async def custom_download(
     chunked: str = "false",
     folder_name: str = "custom_stems"
 ):
-    if task_id not in tasks_status:
+    task = db_manager.get_task(task_id)
+    if not task:
         raise HTTPException(status_code=404, detail="Task not found")
         
-    task = tasks_status[task_id]
     if task["status"] != "completed":
         raise HTTPException(status_code=400, detail="Task not completed yet")
         
@@ -134,10 +177,10 @@ async def custom_download(
 
 @router.get("/stream/{task_id}/{filename}")
 async def stream_audio(task_id: str, filename: str):
-    if task_id not in tasks_status:
+    task = db_manager.get_task(task_id)
+    if not task:
         raise HTTPException(status_code=404, detail="Task not found")
         
-    task = tasks_status[task_id]
     if task["status"] != "completed":
         raise HTTPException(status_code=400, detail="Task not completed yet")
         

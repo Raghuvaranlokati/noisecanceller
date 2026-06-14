@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback, Suspense, useRef } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useSearchParams } from "next/navigation";
-import { UploadCloud, Music, AudioLines, Settings2, ShieldCheck, Zap, Lock, Sliders, Activity, Mic2, Search, LogOut, History, Copy, Check, FileMusic, AlignLeft, Users } from 'lucide-react';
+import { UploadCloud, Music, AudioLines, Settings2, ShieldCheck, Zap, Lock, Sliders, Activity, Mic2, Search, LogOut, History, Copy, Check, FileMusic, AlignLeft, Users, CheckCircle2, XCircle } from 'lucide-react';
 import { db } from "../lib/firebase";
 import { collection, addDoc, getDocs, query, where, deleteDoc, doc, serverTimestamp, orderBy } from "firebase/firestore";
 import ExtractionFlowDiagram from "../components/ExtractionFlowDiagram";
@@ -19,6 +19,8 @@ function HomeContent() {
   const [taskId, setTaskId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const vocalsAudioRef = useRef<HTMLAudioElement>(null);
+  const [healthReport, setHealthReport] = useState<any>(null);
+  const [isHealthChecking, setIsHealthChecking] = useState<boolean>(false);
   
   const { user, isLoaded, isSignedIn } = useUser();
   const searchParams = useSearchParams();
@@ -29,47 +31,74 @@ function HomeContent() {
 
   const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
 
-  const pollProgress = useCallback(async (id: string) => {
-    const interval = setInterval(async () => {
-      try {
-        const res = await fetch(`${baseUrl}/api/status/${id}`);
-        const data = await res.json();
+  const eventSourceRef = useRef<EventSource | null>(null);
 
-        if (data.status === "processing" || data.status === "pending" || data.status === "queued") {
-          setProgress({
-            step: data.step || (data.status === "queued" ? "Queued" : "Processing..."),
-            percent: data.progress || 5,
-            message: data.message || "Working...",
-            chunks_total: data.chunks_total || 0,
-            chunks_completed: data.chunks_completed || 0,
-            chunks_pending: data.chunks_pending || 0,
-            start_time: data.start_time || 0,
-            eta_seconds: data.eta_seconds || 0,
-            completed_time: data.completed_time || 0,
-            queue_position: data.queue_position || 0,
-            status: data.status // Add status to state
-          } as any);
-        } else if (data.status === "completed") {
-          clearInterval(interval);
-          setResultZip(data.result_path || true);
-          setLoading(false);
-          setProgress({ step: "Complete", percent: 100, message: "Ready to download!", chunks_total: 0, chunks_completed: 0, chunks_pending: 0, start_time: 0, eta_seconds: 0, completed_time: 0, queue_position: 0 });
-        } else if (data.status === "failed") {
-          clearInterval(interval);
-          setError(data.message || data.error || "An unknown error occurred on the server.");
-          setLoading(false);
-        } else if (data.status === "cancelled" || data.status === "expired" || res.status === 404) {
-          clearInterval(interval);
-          setError(data.status === "cancelled" ? "Processing was cancelled." : "Task expired or was cleaned from the server.");
-          setLoading(false);
-          setTaskId(null);
-          window.history.replaceState({}, '', '/');
-        }
-      } catch (err) {
-        // Keep trying
+  const pollProgress = useCallback((id: string) => {
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+    }
+
+    const eventSource = new EventSource(`${baseUrl}/api/events/status/${id}`);
+    eventSourceRef.current = eventSource;
+
+    eventSource.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      
+      if (data.error) {
+        eventSource.close();
+        setError(data.error === "Task not found" ? "Task expired or was cleaned from the server." : data.error);
+        setLoading(false);
+        setTaskId(null);
+        window.history.replaceState({}, '', '/');
+        return;
       }
-    }, 2000);
+
+      if (data.status === "processing" || data.status === "pending" || data.status === "queued") {
+        setProgress({
+          step: data.step || (data.status === "queued" ? "Queued" : "Processing..."),
+          percent: data.progress || 5,
+          message: data.message || "Working...",
+          chunks_total: data.chunks_total || 0,
+          chunks_completed: data.chunks_completed || 0,
+          chunks_pending: data.chunks_pending || 0,
+          start_time: data.start_time || 0,
+          eta_seconds: data.eta_seconds || 0,
+          completed_time: data.completed_time || 0,
+          queue_position: data.queue_position || 0,
+          status: data.status
+        } as any);
+      } else if (data.status === "completed") {
+        eventSource.close();
+        setResultZip(data.result_path || true);
+        setLoading(false);
+        setProgress({ step: "Complete", percent: 100, message: "Ready to download!", chunks_total: 0, chunks_completed: 0, chunks_pending: 0, start_time: 0, eta_seconds: 0, completed_time: 0, queue_position: 0 });
+      } else if (data.status === "failed") {
+        eventSource.close();
+        setError(data.message || data.error || "An unknown error occurred on the server.");
+        setLoading(false);
+      } else if (data.status === "cancelled" || data.status === "expired") {
+        eventSource.close();
+        setError(data.status === "cancelled" ? "Processing was cancelled." : "Task expired or was cleaned from the server.");
+        setLoading(false);
+        setTaskId(null);
+        window.history.replaceState({}, '', '/');
+      }
+    };
+
+    eventSource.onerror = () => {
+      // SSE auto-reconnects on network drops.
+      // If the backend strictly sends data.error on 404, we handle it above.
+    };
   }, [baseUrl]);
+
+  // Clean up SSE on component unmount
+  useEffect(() => {
+    return () => {
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const queryTaskId = searchParams.get('taskId');
@@ -111,9 +140,31 @@ function HomeContent() {
     bass: true
   });
 
+  const checkHealth = async (selectedFile: File) => {
+    if (!isSignedIn) return;
+    setIsHealthChecking(true);
+    setHealthReport(null);
+    try {
+      const formData = new FormData();
+      formData.append("file", selectedFile);
+      const res = await fetch(`${baseUrl}/api/health`, {
+        method: "POST",
+        body: formData,
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setHealthReport(data);
+      }
+    } catch (e) {
+      console.error("Health check failed", e);
+    }
+    setIsHealthChecking(false);
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setFile(e.target.files[0]);
+      checkHealth(e.target.files[0]);
     }
   };
 
@@ -121,6 +172,7 @@ function HomeContent() {
     e.preventDefault();
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       setFile(e.dataTransfer.files[0]);
+      checkHealth(e.dataTransfer.files[0]);
     }
   };
 
@@ -460,7 +512,7 @@ function HomeContent() {
                   <div className="flex flex-col items-center">
                     <h3 className="text-3xl text-emerald-400 font-bold mb-4 break-words mx-auto">{file.name}</h3>
                     
-                    <div className="mb-6 p-4 border border-[#27272a] rounded-xl bg-[#0a0a0a] w-full max-w-sm">
+                    <div className="mb-6 p-4 border border-[#27272a] rounded-xl bg-[#0a0a0a] w-full max-w-md">
                       <label className="block text-sm text-gray-400 mb-3 font-bold">Optional: Metadata CSV for Forced Alignment</label>
                       <input 
                         type="file" 
@@ -475,6 +527,59 @@ function HomeContent() {
                       />
                       {metadataCsv && <p className="text-emerald-400 text-xs mt-2 text-left flex items-center gap-1"><Check className="w-3 h-3" /> {metadataCsv.name}</p>}
                     </div>
+
+                    {/* Audio Health Report */}
+                    {isHealthChecking && (
+                      <div className="mb-8 w-full max-w-md bg-[#111] border border-[#27272a] rounded-2xl p-6 shadow-xl relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-full h-1 bg-[#1877F2] animate-pulse"></div>
+                        <div className="flex items-center gap-3 justify-center text-gray-400">
+                          <Activity className="w-5 h-5 animate-pulse text-[#1877F2]" />
+                          <span className="font-medium animate-pulse">Running AI Audio Health Diagnostics...</span>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {healthReport && !isHealthChecking && (
+                      <div className="mb-8 w-full max-w-md bg-[#111] border border-[#27272a] rounded-2xl p-6 shadow-xl relative overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                        <div className={`absolute top-0 left-0 w-full h-1 ${healthReport.score > 80 ? 'bg-emerald-500' : healthReport.score > 50 ? 'bg-yellow-500' : 'bg-red-500'}`}></div>
+                        
+                        <div className="flex items-center justify-between mb-6">
+                          <h4 className="text-white font-bold flex items-center gap-2"><Activity className="w-5 h-5 text-[#1877F2]" /> Audio Health Report</h4>
+                          <div className={`px-3 py-1 rounded-full text-sm font-bold flex items-center gap-1 ${healthReport.score > 80 ? 'bg-emerald-500/20 text-emerald-400' : healthReport.score > 50 ? 'bg-yellow-500/20 text-yellow-400' : 'bg-red-500/20 text-red-400'}`}>
+                            Score: {healthReport.score}/100
+                          </div>
+                        </div>
+
+                        <div className="space-y-3 mb-6">
+                          {healthReport.diagnostics && healthReport.diagnostics.map((diag: any, i: number) => (
+                            <div key={i} className="flex items-start gap-3">
+                              <div className="mt-0.5">
+                                {diag.status === 'good' ? <CheckCircle2 className="w-4 h-4 text-emerald-500" /> : diag.status === 'warning' ? <Activity className="w-4 h-4 text-yellow-500" /> : <XCircle className="w-4 h-4 text-red-500" />}
+                              </div>
+                              <div className="flex-1 text-left">
+                                <p className="text-sm font-medium text-gray-200">{diag.category}</p>
+                                <p className="text-xs text-gray-500">{diag.issue}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        {healthReport.recommendations && healthReport.recommendations.length > 0 && (
+                          <div className="bg-[#1a1a1a] rounded-xl p-4 text-left border border-[#27272a]">
+                            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">AI Recommendations</p>
+                            <ul className="text-sm text-gray-300 space-y-1 list-disc pl-4">
+                              {healthReport.recommendations.map((rec: string, i: number) => (
+                                <li key={i}>{rec}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                        
+                        <p className="text-xs text-center text-gray-500 mt-4 font-medium bg-black/30 py-2 rounded-lg">
+                          Predicted AI Improvement: <span className={healthReport.predictedImprovement === 'High' ? 'text-emerald-400 font-bold' : 'text-[#1877F2] font-bold'}>{healthReport.predictedImprovement}</span>
+                        </p>
+                      </div>
+                    )}
 
                     <button 
                       onClick={(e) => { e.stopPropagation(); handleUpload(); }}

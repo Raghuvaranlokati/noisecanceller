@@ -2,7 +2,9 @@ from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 import uuid
 import os
 import shutil
-from core.state import job_queue, tasks_status, save_db
+import time
+from core.state import job_queue
+from core.database import db_manager
 
 router = APIRouter(prefix="/api")
 
@@ -30,14 +32,16 @@ async def start_processing(
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
         
-    tasks_status[task_id] = {
+    db_manager.upsert_task(task_id, {
         "status": "queued",
         "progress": 0,
         "message": "Placed in queue...",
-        "start_time": None,
-        "filename": file.filename
-    }
-    save_db()
+        "created_at": time.time(),
+        "metadata": {"filename": file.filename}
+    })
+    
+    if email:
+        db_manager.ensure_user(email)
     
     metadata_csv_path = None
     if metadata_csv and metadata_csv.filename:
@@ -68,3 +72,31 @@ async def start_processing(
         send_queued_email(email, task_id)
         
     return {"task_id": task_id}
+
+@router.post("/health")
+async def check_audio_health(
+    file: UploadFile = File(...)
+):
+    if not file:
+        raise HTTPException(status_code=400, detail="File is required")
+        
+    task_id = str(uuid.uuid4())
+    os.makedirs("downloads", exist_ok=True)
+    file_path = os.path.join("downloads", f"health_{task_id}_{file.filename}")
+    
+    try:
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+            
+        from services.health_service import analyze_audio_health
+        health_report = analyze_audio_health(file_path)
+        
+        # Clean up the temp file
+        if os.path.exists(file_path):
+            os.remove(file_path)
+            
+        return health_report
+    except Exception as e:
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        raise HTTPException(status_code=500, detail=str(e))

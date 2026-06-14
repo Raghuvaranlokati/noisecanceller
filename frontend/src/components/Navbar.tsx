@@ -71,7 +71,11 @@ export default function Navbar() {
             )}
             {isLoaded && isSignedIn && (
               <>
-                <Link href="/history" className="flex items-center gap-2 text-sm font-medium text-gray-300 hover:text-white transition-colors mr-2">
+                <Link href="/dashboard" className="flex items-center gap-2 text-sm font-medium text-[#1877F2] hover:text-[#166FE5] transition-colors mr-4">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
+                  Dashboard
+                </Link>
+                <Link href="/history" className="flex items-center gap-2 text-sm font-medium text-gray-300 hover:text-white transition-colors mr-4">
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                   History
                 </Link>
@@ -144,7 +148,9 @@ export default function Navbar() {
                     <UserButton />
                     <span className="text-gray-300 font-medium">My Account</span>
                   </div>
-                  <Link href="/" onClick={() => setIsOpen(false)} className="w-full text-center bg-[#1877F2] text-white px-4 py-2 rounded-full font-bold inline-block">Extract Now</Link>
+                  <Link href="/dashboard" onClick={() => setIsOpen(false)} className="w-full text-left text-base font-medium text-[#1877F2] py-2">Dashboard</Link>
+                  <Link href="/history" onClick={() => setIsOpen(false)} className="w-full text-left text-base font-medium text-[#E4E6EB] py-2">History</Link>
+                  <Link href="/" onClick={() => setIsOpen(false)} className="w-full text-center bg-[#1877F2] text-white px-4 py-2 rounded-full font-bold inline-block mt-2">Extract Now</Link>
                 </>
               )}
             </div>
