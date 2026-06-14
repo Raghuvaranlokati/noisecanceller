@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback, Suspense, useRef } from "react";
-import { useUser } from "@clerk/nextjs";
+import { useUser, useClerk } from "@clerk/nextjs";
 import { useSearchParams } from "next/navigation";
 import { UploadCloud, Music, AudioLines, Settings2, ShieldCheck, Zap, Lock, Sliders, Activity, Mic2, Search, LogOut, History, Copy, Check, FileMusic, AlignLeft, Users, CheckCircle2, XCircle } from 'lucide-react';
 import { db } from "../lib/firebase";
@@ -24,6 +24,7 @@ function HomeContent() {
   const [isHealthChecking, setIsHealthChecking] = useState<boolean>(false);
   
   const { user, isLoaded, isSignedIn } = useUser();
+  const { openSignIn } = useClerk();
   const searchParams = useSearchParams();
 
   const [userEmail, setUserEmail] = useState<string | null>(null);
@@ -184,7 +185,7 @@ function HomeContent() {
   const handleUpload = async () => {
     if (!file) return;
     if (!isSignedIn) {
-      setError("Please sign in to upload and process files. You can login using the button in the top right corner.");
+      openSignIn();
       return;
     }
     
