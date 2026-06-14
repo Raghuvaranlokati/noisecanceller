@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback, Suspense, useRef } from "react";
 import { useUser, useClerk } from "@clerk/nextjs";
 import { useSearchParams } from "next/navigation";
-import { UploadCloud, Music, AudioLines, Settings2, ShieldCheck, Zap, Lock, Sliders, Activity, Mic2, Search, LogOut, History, Copy, Check, FileMusic, AlignLeft, Users, CheckCircle2, XCircle } from 'lucide-react';
+import { UploadCloud, Music, AudioLines, Settings2, ShieldCheck, Zap, Lock, Sliders, Activity, Mic2, Search, LogOut, History, Copy, Check, FileMusic, AlignLeft, Users, CheckCircle2, XCircle, List, Plus } from 'lucide-react';
 import { db } from "../lib/firebase";
 import { collection, addDoc, getDocs, query, where, deleteDoc, doc, serverTimestamp, orderBy } from "firebase/firestore";
 import ExtractionFlowDiagram from "../components/ExtractionFlowDiagram";
@@ -22,6 +22,7 @@ function HomeContent() {
   const vocalsAudioRef = useRef<HTMLAudioElement>(null);
   const [healthReport, setHealthReport] = useState<any>(null);
   const [isHealthChecking, setIsHealthChecking] = useState<boolean>(false);
+  const [activeTasks, setActiveTasks] = useState<any[]>([]);
   
   const { user, isLoaded, isSignedIn } = useUser();
   const { openSignIn } = useClerk();
@@ -121,33 +122,57 @@ function HomeContent() {
     }
   }, []);
 
-  // Auto-restore latest task on login/refresh
+  const selectTask = (task: any) => {
+    setTaskId(task.task_id);
+    if (task.status === "completed") {
+      if (eventSourceRef.current) eventSourceRef.current.close();
+      setResultZip(task.result_path || true);
+      setLoading(false);
+      setProgress({ step: "Complete", percent: 100, message: "Ready to download!", chunks_total: 0, chunks_completed: 0, chunks_pending: 0, start_time: 0, eta_seconds: 0, completed_time: 0, queue_position: 0 } as any);
+      setError(null);
+    } else if (task.status === "failed" || task.status === "cancelled") {
+      if (eventSourceRef.current) eventSourceRef.current.close();
+      setError(task.message || "Task failed or cancelled.");
+      setResultZip(null);
+      setLoading(false);
+    } else {
+      setResultZip(null);
+      setError(null);
+      setLoading(true);
+      pollProgress(task.task_id);
+    }
+  };
+
+  const startNewUpload = () => {
+    if (eventSourceRef.current) eventSourceRef.current.close();
+    setTaskId(null);
+    setResultZip(null);
+    setError(null);
+    setLoading(false);
+    setProgress({ step: "", percent: 0, message: "", chunks_total: 0, chunks_completed: 0, chunks_pending: 0, start_time: 0, eta_seconds: 0, completed_time: 0, queue_position: 0 } as any);
+  };
+
+  // Auto-fetch all tasks
   useEffect(() => {
     const email = user?.primaryEmailAddress?.emailAddress;
-    if (email && !taskId && !loading && !resultZip && !searchParams.get('taskId')) {
-      const fetchLatestTask = async () => {
-        try {
-          const res = await fetch(`${baseUrl}/api/user/latest_task?email=${encodeURIComponent(email)}`);
-          if (res.ok) {
-            const task = await res.json();
-            setTaskId(task.task_id);
-            if (task.status === "completed") {
-              setResultZip(task.result_path || true);
-              setProgress({ step: "Complete", percent: 100, message: "Ready to download!", chunks_total: 0, chunks_completed: 0, chunks_pending: 0, start_time: 0, eta_seconds: 0, completed_time: 0, queue_position: 0 } as any);
-            } else if (task.status === "failed" || task.status === "cancelled") {
-              setError(task.message || "Previous task failed or was cancelled.");
-            } else {
-              setLoading(true);
-              pollProgress(task.task_id);
-            }
-          }
-        } catch (err) {
-          console.error("Failed to restore latest task", err);
+    if (!email) return;
+
+    const fetchTasks = async () => {
+      try {
+        const res = await fetch(`${baseUrl}/api/user/tasks?email=${encodeURIComponent(email)}`);
+        if (res.ok) {
+          const tasks = await res.json();
+          setActiveTasks(tasks);
         }
-      };
-      fetchLatestTask();
-    }
-  }, [user?.primaryEmailAddress?.emailAddress, taskId, loading, resultZip, searchParams, pollProgress, baseUrl]);
+      } catch (err) {
+        console.error("Failed to fetch tasks", err);
+      }
+    };
+
+    fetchTasks();
+    const interval = setInterval(fetchTasks, 3000);
+    return () => clearInterval(interval);
+  }, [user?.primaryEmailAddress?.emailAddress, baseUrl]);
   
   // Feature Toggles
   const [isolateVocals, setIsolateVocals] = useState<boolean>(true);
@@ -853,9 +878,45 @@ function HomeContent() {
                   </p>
                 </div>
                 <div className="text-center mt-6">
-                  <button onClick={() => {setResultZip(null); setFile(null);}} className="text-gray-400 hover:text-white underline text-sm">
+                  <button onClick={startNewUpload} className="text-gray-400 hover:text-white underline text-sm">
                     Process another file
                   </button>
+                </div>
+              </div>
+            )}
+            
+            {/* Task Panel */}
+            {activeTasks.length > 0 && (
+              <div className="mt-8 border-t border-[#27272a] pt-8">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-xl font-bold text-white flex items-center gap-2"><List className="w-5 h-5" /> Your Tasks</h3>
+                  {taskId && (
+                    <button onClick={startNewUpload} className="bg-[#1877F2] hover:bg-[#1877F2]/90 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2">
+                      <Plus className="w-4 h-4" /> New Upload
+                    </button>
+                  )}
+                </div>
+                <div className="flex flex-col gap-3 max-h-64 overflow-y-auto pr-2">
+                  {activeTasks.map(task => (
+                    <div 
+                      key={task.task_id} 
+                      onClick={() => selectTask(task)}
+                      className={`p-4 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${taskId === task.task_id ? 'bg-[#1877F2]/10 border-[#1877F2]' : 'bg-[#0a0a0a] border-[#27272a] hover:border-gray-500'}`}
+                    >
+                      <div className="flex items-center gap-3">
+                        {task.status === 'processing' ? <Activity className="w-5 h-5 text-[#1877F2] animate-pulse" /> : 
+                         task.status === 'queued' ? <List className="w-5 h-5 text-yellow-500" /> :
+                         task.status === 'completed' ? <CheckCircle2 className="w-5 h-5 text-emerald-500" /> :
+                         <XCircle className="w-5 h-5 text-red-500" />
+                        }
+                        <div>
+                           <p className="text-sm text-white font-bold">{task.metadata?.filename || 'Audio File'} <span className="text-xs text-gray-500 font-normal ml-2">{task.task_id.substring(0, 8)}</span></p>
+                           <p className="text-xs text-gray-400 capitalize">{task.status} {task.status === 'processing' ? `${task.progress || 0}%` : ''} {task.status === 'queued' ? `(Pos: ${task.queue_position || '?'})` : ''}</p>
+                        </div>
+                      </div>
+                      <button className="text-xs text-gray-400 hover:text-white bg-[#111] px-3 py-1 rounded-lg">View</button>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}

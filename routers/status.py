@@ -29,6 +29,9 @@ async def events_status(task_id: str):
                     else:
                         job_id = job[0]
                         
+                    if job_id in state.cancelled_tasks:
+                        continue
+                        
                     if job_id == task_id:
                         break
                     pos += 1
@@ -36,6 +39,9 @@ async def events_status(task_id: str):
                 task["queue_position"] = pos
                 task["eta_seconds"] = pos * 180 + (180 if state.active_task_id else 0)
                 task["message"] = f"Waiting in queue... Position: {pos}"
+            else:
+                # Ensure processing/completed tasks don't have queue_position
+                task.pop("queue_position", None)
                 
             # Only send if changed to reduce bandwidth
             if str(task) != str(last_data):
@@ -105,6 +111,9 @@ async def get_status(task_id: str):
             else:
                 job_id = job[0]
                 
+            if job_id in state.cancelled_tasks:
+                continue
+                
             if job_id == task_id:
                 break
             pos += 1
@@ -112,6 +121,8 @@ async def get_status(task_id: str):
         task["queue_position"] = pos
         task["eta_seconds"] = pos * 180 + (180 if state.active_task_id else 0)
         task["message"] = f"Waiting in queue... Position: {pos}"
+    else:
+        task.pop("queue_position", None)
         
     return task
 
@@ -200,27 +211,31 @@ async def stream_audio(task_id: str, filename: str):
         
     return FileResponse(file_path, media_type=media_type)
 
-@router.get("/user/latest_task")
-async def get_user_latest_task(email: str):
-    task = db_manager.get_latest_task_for_user(email)
-    if not task:
-        raise HTTPException(status_code=404, detail="No tasks found for user")
+@router.get("/user/tasks")
+async def get_user_tasks(email: str):
+    tasks = db_manager.get_all_tasks_for_user(email)
     
-    # Optional: if it's queued, also add queue position
-    if task.get("status") == "queued":
-        pos = 1
-        for job in list(job_queue.queue):
-            if isinstance(job, dict):
-                job_id = job.get("task_id")
-            else:
-                job_id = job[0]
+    # Optional: if any are queued, also add queue position
+    for task in tasks:
+        if task.get("status") == "queued":
+            pos = 1
+            for job in list(job_queue.queue):
+                if isinstance(job, dict):
+                    job_id = job.get("task_id")
+                else:
+                    job_id = job[0]
+                    
+                if job_id in state.cancelled_tasks:
+                    continue
+                    
+                if job_id == task["task_id"]:
+                    break
+                pos += 1
                 
-            if job_id == task["task_id"]:
-                break
-            pos += 1
+            task["queue_position"] = pos
+            task["eta_seconds"] = pos * 180 + (180 if state.active_task_id else 0)
+            task["message"] = f"Waiting in queue... Position: {pos}"
+        else:
+            task.pop("queue_position", None)
             
-        task["queue_position"] = pos
-        task["eta_seconds"] = pos * 180 + (180 if state.active_task_id else 0)
-        task["message"] = f"Waiting in queue... Position: {pos}"
-        
-    return task
+    return tasks
