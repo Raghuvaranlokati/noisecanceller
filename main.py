@@ -33,3 +33,7 @@ app.include_router(audio.router)
 app.include_router(status.router)
 app.include_router(admin.router)
 app.include_router(public_api.router)
+
+@app.get("/")
+async def root():
+    return {"status": "ok", "service": "Stemify AI Backend API"}
