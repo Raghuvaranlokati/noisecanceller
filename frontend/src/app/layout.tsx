@@ -24,7 +24,10 @@ export const metadata: Metadata = {
     title: "VocalBee | Free Audio Separation",
     description: "Extract studio-quality vocals, drums, bass, and instruments from any audio or video file for free using advanced AI.",
     type: "website",
-  }
+  },
+  verification: {
+    google: "UuCDe-NGPE9ac4gAQchPj6qrDOS1-FtRGRD3oNJqI4Q",
+  },
 };
 
 export default function RootLayout({
