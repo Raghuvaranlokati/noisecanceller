@@ -9,7 +9,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from core.worker import start_worker
 from core.database import db_manager
-from routers import audio, status
+from routers import audio, status, billing, admin, public_api
 
 app = FastAPI(title="Stemify AI API")
 
@@ -31,3 +31,6 @@ start_worker()
 # Include Routers
 app.include_router(audio.router)
 app.include_router(status.router)
+app.include_router(billing.router)
+app.include_router(admin.router)
+app.include_router(public_api.router)
