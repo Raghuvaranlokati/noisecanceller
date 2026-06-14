@@ -9,8 +9,8 @@ export default function Footer() {
           
           <div className="col-span-1 md:col-span-1">
             <div className="flex items-center gap-2 mb-6">
-              <img src="/logo.svg" alt="VocalHive Logo" className="w-8 h-8" />
-              <span className="font-bold text-white text-xl tracking-tight">VocalHive</span>
+              <img src="/logo.svg" alt="VocalBee Logo" className="w-8 h-8" />
+              <span className="font-bold text-white text-xl tracking-tight">VocalBee</span>
             </div>
             <p className="text-gray-400 text-sm leading-relaxed max-w-xs">
               Next-generation AI audio separation. Extract pristine vocals and stems from any track instantly.
@@ -49,9 +49,9 @@ export default function Footer() {
           
         </div>
         
-        <div className="border-t border-white/5 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
+        <div className="border-t border-[#27272a] pt-8 flex flex-col md:flex-row items-center justify-between">
           <p className="text-gray-500 text-sm">
-            &copy; {new Date().getFullYear()} Stemify AI. All rights reserved.
+            &copy; {new Date().getFullYear()} VocalBee. All rights reserved.
           </p>
           <div className="flex gap-6">
             <span className="text-gray-500 text-sm">Status: All systems operational</span>

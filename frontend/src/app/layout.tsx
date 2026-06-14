@@ -17,11 +17,11 @@ const outfit = Outfit({
 });
 
 export const metadata: Metadata = {
-  title: "VocalHive | The World's Best AI Vocal Extractor",
+  title: "VocalBee | The World's Best AI Vocal Extractor",
   description: "Extract high-quality vocals, drums, bass, and instruments from any audio or video file instantly using deep learning.",
   keywords: ["vocal remover", "extract vocals", "AI stem separation", "isolate vocals", "karaoke maker", "free vocal remover", "audio separator"],
   openGraph: {
-    title: "VocalHive | Free Audio Separation",
+    title: "VocalBee | Free Audio Separation",
     description: "Extract studio-quality vocals, drums, bass, and instruments from any audio or video file for free using advanced AI.",
     type: "website",
   }
