@@ -60,7 +60,7 @@ def process_audio_file(
             progress_callback(30, "Analyzing audio and isolating core stems (takes a few minutes)...")
             demucs_out = task_dir / "demucs_out"
             
-            cmd = ["python", "-m", "demucs.separate", "-n", "htdemucs", str(downloaded_audio_path), "-o", str(demucs_out)]
+            cmd = ["python", "-m", "demucs.separate", "-n", "htdemucs", "--jobs", "1", "--segment", "10", str(downloaded_audio_path), "-o", str(demucs_out)]
             if not four_stem:
                 cmd.insert(5, "--two-stems")
                 cmd.insert(6, "vocals")
@@ -119,6 +119,9 @@ def process_audio_file(
                     shutil.copy(str(demucs_converted_dir / "vocals.wav"), str(final_dir / "vocals.wav"))
                 if (demucs_converted_dir / "no_vocals.wav").exists():
                     shutil.copy(str(demucs_converted_dir / "no_vocals.wav"), str(final_dir / "instrumental.wav"))
+                    
+            import gc
+            gc.collect()
         
         # Step 3: Enhance Speech (Optional)
         if enhance_speech:
@@ -140,6 +143,9 @@ def process_audio_file(
             if target_for_enhance.name == "vocals.wav":
                 shutil.copy(str(out_path), str(final_dir / "vocals.wav"))
                 
+            import gc
+            gc.collect()
+            
         # Step 4: AI De-Reverb (Optional)
         if de_reverb and (final_dir / "vocals.wav").exists():
             progress_callback(75, "Removing room echo using AI De-Reverb...")
