@@ -1,12 +1,14 @@
 import { MetadataRoute } from 'next'
  
 export default function robots(): MetadataRoute.Robots {
+  const baseUrl = process.env.NEXT_PUBLIC_FRONTEND_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://vocalhive.vercel.app');
+
   return {
     rules: {
       userAgent: '*',
       allow: '/',
       disallow: ['/api/', '/_next/'],
     },
-    sitemap: 'https://huggingface.co/spaces/raghu2/noisecanceller/sitemap.xml',
+    sitemap: `${baseUrl}/sitemap.xml`,
   }
 }

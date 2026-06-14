@@ -1,7 +1,7 @@
 import { MetadataRoute } from 'next'
  
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = 'https://huggingface.co/spaces/raghu2/noisecanceller';
+  const baseUrl = process.env.NEXT_PUBLIC_FRONTEND_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://vocalhive.vercel.app');
   
   return [
     {
