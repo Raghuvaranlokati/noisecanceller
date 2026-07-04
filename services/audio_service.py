@@ -322,6 +322,9 @@ def process_audio_file(
                 use_auth_token=hf_token
             )
             
+            if pipeline is None:
+                raise Exception("Failed to load pyannote pipeline. Please ensure your HF_TOKEN is valid and you have accepted the user agreement for pyannote/speaker-diarization-3.1 on Hugging Face.")
+                
             # Use CPU for now to prevent VRAM crashes, or GPU if available
             device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
             pipeline.to(device)
