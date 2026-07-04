@@ -16,7 +16,7 @@ async def start_processing(
     isolate_instrumental: str = Form("false"),
     four_stem: str = Form("false"),
     enhance_speech: str = Form("false"),
-    stem_to_midi: str = Form("false"),
+
     de_reverb: str = Form("false"),
     lyric_sync: str = Form("false"),
 
@@ -60,7 +60,7 @@ async def start_processing(
             isolate_instrumental.lower() == "true", 
             four_stem.lower() == "true", 
             enhance_speech.lower() == "true", 
-            stem_to_midi.lower() == "true", 
+
             de_reverb.lower() == "true", 
             lyric_sync.lower() == "true", 
 

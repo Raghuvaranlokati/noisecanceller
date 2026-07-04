@@ -21,10 +21,8 @@ function TaskStatusRow({ item, onDelete }: { item: any, onDelete: (id: string) =
     if (opts.isolateInstrumental) active.push("Instrumental");
     if (opts.fourStem) active.push("4-Stem");
     if (opts.enhance) active.push("Enhance");
-    if (opts.stemToMidi) active.push("MIDI");
     if (opts.deReverb) active.push("De-Reverb");
     if (opts.lyricSync) active.push("Lyrics");
-    if (opts.separateSpeakers) active.push("Speakers");
     return active;
   };
 

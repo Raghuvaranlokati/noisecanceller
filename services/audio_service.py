@@ -33,7 +33,7 @@ def process_audio_file(
     isolate_instrumental: bool = False,
     four_stem: bool = False,
     enhance_speech: bool = False,
-    stem_to_midi: bool = False,
+
     de_reverb: bool = False,
     lyric_sync: bool = False,
 
@@ -284,23 +284,7 @@ def process_audio_file(
             with open(timeline_path, "w", encoding="utf-8") as tf:
                 json.dump({"markers": timeline_markers}, tf, indent=2)
 
-        # Step 6: Stem-to-MIDI (Optional)
-        if stem_to_midi:
-            progress_callback(85, "Transcribing instrumentals into MIDI notation...")
-            if (final_dir / "bass.wav").exists():
-                predict_and_save(
-                    [str(final_dir / "bass.wav")],
-                    str(final_dir),
-                    True, False, False, False, # save_midi=True
-                    model_or_model_path=ICASSP_2022_MODEL_PATH
-                )
-            if (final_dir / "instrumental.wav").exists():
-                predict_and_save(
-                    [str(final_dir / "instrumental.wav")],
-                    str(final_dir),
-                    True, False, False, False,
-                    model_or_model_path=ICASSP_2022_MODEL_PATH
-                )
+
                 
 
         # Step 8.5: Metadata CSV Text Matching (Forced Alignment)

@@ -57,7 +57,7 @@ async def public_process(
             isolate_instrumental, 
             False, # four_stem
             False, # enhance_speech
-            False, # stem_to_midi
+
             False, # de_reverb
             False, # lyric_sync
             user["email"],

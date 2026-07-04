@@ -182,7 +182,7 @@ function HomeContent() {
   const [isolateInstrumental, setIsolateInstrumental] = useState<boolean>(true);
   const [fourStem, setFourStem] = useState<boolean>(false);
   const [enhance, setEnhance] = useState<boolean>(false);
-  const [stemToMidi, setStemToMidi] = useState<boolean>(false);
+
   const [deReverb, setDeReverb] = useState<boolean>(false);
   const [lyricSync, setLyricSync] = useState<boolean>(false);
 
@@ -257,7 +257,7 @@ function HomeContent() {
     formData.append("isolate_instrumental", isolateInstrumental.toString());
     formData.append("four_stem", fourStem.toString());
     formData.append("enhance_speech", enhance.toString());
-    formData.append("stem_to_midi", stemToMidi.toString());
+
     formData.append("de_reverb", deReverb.toString());
     formData.append("lyric_sync", lyricSync.toString());
 
@@ -294,7 +294,6 @@ function HomeContent() {
               isolateInstrumental,
               fourStem,
               enhance,
-              stemToMidi,
               deReverb,
               lyricSync,
               fastMode
@@ -446,27 +445,6 @@ function HomeContent() {
             </div>
             
             <div className="space-y-3">
-              <button 
-                onClick={() => setStemToMidi(!stemToMidi)}
-                className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all text-left relative overflow-hidden group ${
-                  stemToMidi 
-                    ? 'bg-yellow-500/10 border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.15)]' 
-                    : 'bg-[#050505] border-[#27272a] hover:border-gray-500'
-                }`}
-              >
-                <div className={`absolute top-0 left-0 w-1 h-full ${stemToMidi ? 'bg-yellow-500' : 'bg-transparent'}`}></div>
-                <div className="flex items-center gap-3">
-                  <FileMusic className={`w-5 h-5 ${stemToMidi ? 'text-yellow-500' : 'text-gray-500'}`} />
-                  <div className="flex flex-col">
-                    <span className={`font-bold ${stemToMidi ? 'text-white' : 'text-gray-300'}`}>Stem-to-MIDI <span className="ml-2 text-[9px] bg-yellow-500/20 text-yellow-500 px-2 py-0.5 rounded font-bold uppercase">Pro</span></span>
-                    <span className="text-[10px] text-gray-500">Convert Bass/Melody directly to .midi</span>
-                  </div>
-                </div>
-                {/* Custom Toggle Switch UI */}
-                <div className={`w-12 h-6 rounded-full p-1 transition-colors ${stemToMidi ? 'bg-yellow-500' : 'bg-[#27272a]'}`}>
-                  <div className={`w-4 h-4 bg-white rounded-full transition-transform ${stemToMidi ? 'translate-x-6' : 'translate-x-0'}`} />
-                </div>
-              </button>
 
               <button 
                 onClick={() => setDeReverb(!deReverb)}
