@@ -93,13 +93,20 @@ def process_audio_file(
                 sep.load_model(model_filename='UVR-MDX-NET-Voc_FT.onnx')
                 out_files = sep.separate(str(downloaded_audio_path))
                 
-                # audio-separator returns paths. UVR-MDX-NET-Voc_FT typically returns Instrumental and Vocals.
+                # audio-separator may return relative paths or just filenames.
+                # Resolve them against the output directory to get the actual file path.
                 for f in out_files:
-                    f_name = os.path.basename(f).lower()
+                    f_path = Path(f)
+                    if not f_path.is_absolute() or not f_path.exists():
+                        f_path = final_dir / f_path.name
+                    if not f_path.exists():
+                        print(f"WARNING: Separator output file not found: {f} (resolved: {f_path})")
+                        continue
+                    f_name = f_path.name.lower()
                     if "vocals" in f_name or "vocal" in f_name:
-                        shutil.move(f, str(final_dir / "vocals.wav"))
+                        shutil.move(str(f_path), str(final_dir / "vocals.wav"))
                     elif "instrumental" in f_name or "inst" in f_name:
-                        shutil.move(f, str(final_dir / "instrumental.wav"))
+                        shutil.move(str(f_path), str(final_dir / "instrumental.wav"))
             else:
                 # HIGH QUALITY MODE or 4-STEM MODE using MDX23C (best overall) or Demucs
                 progress_callback(40, "Running high-quality separation...")
@@ -110,19 +117,27 @@ def process_audio_file(
                 
                 out_files = sep.separate(str(downloaded_audio_path))
                 
+                # audio-separator may return relative paths or just filenames.
+                # Resolve them against the output directory to get the actual file path.
                 for f in out_files:
-                    f_name = os.path.basename(f).lower()
+                    f_path = Path(f)
+                    if not f_path.is_absolute() or not f_path.exists():
+                        f_path = final_dir / f_path.name
+                    if not f_path.exists():
+                        print(f"WARNING: Separator output file not found: {f} (resolved: {f_path})")
+                        continue
+                    f_name = f_path.name.lower()
                     # Map htdemucs outputs to our expected names
                     if "vocals" in f_name or "vocal" in f_name:
-                        shutil.move(f, str(final_dir / "vocals.wav"))
+                        shutil.move(str(f_path), str(final_dir / "vocals.wav"))
                     elif "bass" in f_name:
-                        shutil.move(f, str(final_dir / "bass.wav"))
+                        shutil.move(str(f_path), str(final_dir / "bass.wav"))
                     elif "drums" in f_name:
-                        shutil.move(f, str(final_dir / "drums.wav"))
+                        shutil.move(str(f_path), str(final_dir / "drums.wav"))
                     elif "other" in f_name:
-                        shutil.move(f, str(final_dir / "instrumental.wav"))
+                        shutil.move(str(f_path), str(final_dir / "instrumental.wav"))
                     elif "instrumental" in f_name or "inst" in f_name:
-                        shutil.move(f, str(final_dir / "instrumental.wav"))
+                        shutil.move(str(f_path), str(final_dir / "instrumental.wav"))
                         
             import gc
             gc.collect()
