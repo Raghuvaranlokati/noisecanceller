@@ -36,20 +36,20 @@ def queue_worker():
                 if isinstance(job, tuple):
                     # Fallback for very old legacy tuple format
                     metadata_csv_path = None
-                    _, file_path, isolate_vocals, isolate_instrumental, four_stem, enhance_speech, stem_to_midi, de_reverb, lyric_sync, separate_speakers, user_email = job[:11]
+                    _, file_path, isolate_vocals, isolate_instrumental, four_stem, enhance_speech, stem_to_midi, de_reverb, lyric_sync, user_email = job[:10]
                 else:
                     args = job.get("args")
                     if len(args) == 10:
-                        file_path, isolate_vocals, isolate_instrumental, four_stem, enhance_speech, stem_to_midi, de_reverb, lyric_sync, separate_speakers, user_email = args
+                        file_path, isolate_vocals, isolate_instrumental, four_stem, enhance_speech, stem_to_midi, de_reverb, lyric_sync, user_email = args
                         metadata_csv_path = None
                         fast_mode = True
                     elif len(args) == 11:
-                        file_path, isolate_vocals, isolate_instrumental, four_stem, enhance_speech, stem_to_midi, de_reverb, lyric_sync, separate_speakers, user_email, metadata_csv_path = args
+                        file_path, isolate_vocals, isolate_instrumental, four_stem, enhance_speech, stem_to_midi, de_reverb, lyric_sync, user_email, metadata_csv_path = args
                         fast_mode = True
                     else:
-                        file_path, isolate_vocals, isolate_instrumental, four_stem, enhance_speech, stem_to_midi, de_reverb, lyric_sync, separate_speakers, fast_mode, user_email, metadata_csv_path = args
+                        file_path, isolate_vocals, isolate_instrumental, four_stem, enhance_speech, stem_to_midi, de_reverb, lyric_sync, fast_mode, user_email, metadata_csv_path = args
                         
-                run_audio_processing(task_id, file_path, isolate_vocals, isolate_instrumental, four_stem, enhance_speech, stem_to_midi, de_reverb, lyric_sync, separate_speakers, user_email, metadata_csv_path, fast_mode)
+                run_audio_processing(task_id, file_path, isolate_vocals, isolate_instrumental, four_stem, enhance_speech, stem_to_midi, de_reverb, lyric_sync, user_email, metadata_csv_path, fast_mode)
             
             state.active_task_id = None
             job_queue.task_done()

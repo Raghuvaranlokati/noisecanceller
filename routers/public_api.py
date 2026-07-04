@@ -60,7 +60,6 @@ async def public_process(
             False, # stem_to_midi
             False, # de_reverb
             False, # lyric_sync
-            False, # separate_speakers
             user["email"],
             None
         )

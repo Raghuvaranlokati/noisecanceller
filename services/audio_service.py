@@ -36,7 +36,7 @@ def process_audio_file(
     stem_to_midi: bool = False,
     de_reverb: bool = False,
     lyric_sync: bool = False,
-    separate_speakers: bool = False,
+
     metadata_csv_path: str = None,
     fast_mode: bool = True
 ) -> str:
@@ -302,54 +302,6 @@ def process_audio_file(
                     model_or_model_path=ICASSP_2022_MODEL_PATH
                 )
                 
-        # Step 7: Separate Speakers (Optional)
-        target_audio_for_separation = None
-        if (final_dir / "vocals_dry.wav").exists():
-            target_audio_for_separation = final_dir / "vocals_dry.wav"
-        elif (final_dir / "vocals.wav").exists():
-            target_audio_for_separation = final_dir / "vocals.wav"
-        elif (final_dir / "original.wav").exists():
-            target_audio_for_separation = final_dir / "original.wav"
-            
-        if separate_speakers and target_audio_for_separation:
-            progress_callback(88, "Diarizing audio and separating individual speakers...")
-            hf_token = os.environ.get("HF_TOKEN")
-            if not hf_token:
-                raise Exception("HF_TOKEN not found in environment. Pyannote requires it.")
-                
-            pipeline = Pipeline.from_pretrained(
-                "pyannote/speaker-diarization-3.1",
-                use_auth_token=hf_token
-            )
-            
-            if pipeline is None:
-                raise Exception("Failed to load pyannote pipeline. Please ensure your HF_TOKEN is valid and you have accepted the user agreement for pyannote/speaker-diarization-3.1 on Hugging Face.")
-                
-            # Use CPU for now to prevent VRAM crashes, or GPU if available
-            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-            pipeline.to(device)
-
-            audio_path_str = str(target_audio_for_separation)
-            diarization = pipeline(audio_path_str)
-            
-            full_audio = AudioSegment.from_wav(audio_path_str)
-            speaker_segments = {}
-            
-            # Group segments by speaker
-            for turn, _, speaker in diarization.itertracks(yield_label=True):
-                start_ms = int(turn.start * 1000)
-                end_ms = int(turn.end * 1000)
-                segment = full_audio[start_ms:end_ms]
-                
-                if speaker not in speaker_segments:
-                    speaker_segments[speaker] = segment
-                else:
-                    speaker_segments[speaker] += segment
-                    
-            # Export distinct speaker files
-            for speaker, audio in speaker_segments.items():
-                # Exporting as e.g., SPEAKER_00.wav, SPEAKER_01.wav
-                audio.export(str(final_dir / f"{speaker}.wav"), format="wav")
 
         # Step 8.5: Metadata CSV Text Matching (Forced Alignment)
         if metadata_csv_path and os.path.exists(metadata_csv_path):
