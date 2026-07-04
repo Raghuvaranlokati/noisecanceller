@@ -17,14 +17,13 @@ import logging
 # Base directory for all temporary files during processing
 WORK_DIR = Path("temp_workdir")
 
-# Global singleton for fast MDX models to prevent reloading
-_global_separator = None
-
-def get_separator():
-    global _global_separator
-    if _global_separator is None:
-        _global_separator = Separator(log_level=logging.WARNING)
-    return _global_separator
+# Factory for Separator instances — create fresh to avoid stale model state
+def create_separator(output_dir=None, output_format="WAV"):
+    sep = Separator(log_level=logging.WARNING)
+    if output_dir:
+        sep.output_dir = str(output_dir)
+    sep.output_format = output_format
+    return sep
 
 def process_audio_file(
     file_path: str, 
@@ -82,15 +81,15 @@ def process_audio_file(
             if audio_duration > 600:
                 fast_mode = True # Force fast mode for > 10 min audio
                 
-            sep = get_separator()
-            sep.output_dir = str(final_dir)
-            sep.output_format = "WAV"
+            sep = create_separator(output_dir=final_dir, output_format="WAV")
             
             if fast_mode and not four_stem:
                 # FAST CPU MODE (MDX-Net via audio-separator)
                 progress_callback(40, "Running high-speed MDX-Net separation...")
                 # UVR-MDX-NET-Voc_FT is blazingly fast on CPU and highly accurate for Vocals vs Instrumental
                 sep.load_model(model_filename='UVR-MDX-NET-Voc_FT.onnx')
+                if sep.model_instance is None:
+                    raise RuntimeError("Failed to load MDX-Net model. The model may not have downloaded correctly.")
                 out_files = sep.separate(str(downloaded_audio_path))
                 
                 # audio-separator may return relative paths or just filenames.
@@ -115,6 +114,8 @@ def process_audio_file(
                 else:
                     sep.load_model(model_filename='UVR-MDX-NET-Inst_HQ_3.onnx')
                 
+                if sep.model_instance is None:
+                    raise RuntimeError(f"Failed to load separation model. The model may not have downloaded correctly.")
                 out_files = sep.separate(str(downloaded_audio_path))
                 
                 # audio-separator may return relative paths or just filenames.
@@ -168,14 +169,20 @@ def process_audio_file(
         # Step 4: AI De-Reverb (Optional)
         if de_reverb and (final_dir / "vocals.wav").exists():
             progress_callback(75, "Removing room echo using AI De-Reverb...")
-            sep = Separator()
+            sep_dereverb = create_separator(output_dir=final_dir, output_format="WAV")
             # UVR-DeEcho-DeReverb is the standard model, but might take a minute to download on first run
-            sep.load_model(model_filename='UVR-DeEcho-DeReverb.pth')
+            sep_dereverb.load_model(model_filename='UVR-DeEcho-DeReverb.pth')
+            if sep_dereverb.model_instance is None:
+                raise RuntimeError("Failed to load De-Reverb model. The model may not have downloaded correctly.")
             # Returns a list of strings [vocals_no_reverb.wav, reverb_only.wav]
-            out_files = sep.separate(str(final_dir / "vocals.wav"))
+            out_files = sep_dereverb.separate(str(final_dir / "vocals.wav"))
             # Assuming out_files[0] is the dry vocal, let's copy it over the original
             if len(out_files) > 0:
-                shutil.copy(out_files[0], str(final_dir / "vocals_dry.wav"))
+                f_path = Path(out_files[0])
+                if not f_path.is_absolute() or not f_path.exists():
+                    f_path = final_dir / f_path.name
+                if f_path.exists():
+                    shutil.copy(str(f_path), str(final_dir / "vocals_dry.wav"))
 
         # Step 5: Whisper Lyric Sync (Optional)
         target_audio_for_whisper = None
