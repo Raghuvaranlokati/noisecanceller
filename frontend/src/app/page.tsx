@@ -145,11 +145,13 @@ function HomeContent() {
 
   const startNewUpload = () => {
     if (eventSourceRef.current) eventSourceRef.current.close();
+    setFile(null);
     setTaskId(null);
     setResultZip(null);
     setError(null);
     setLoading(false);
     setProgress({ step: "", percent: 0, message: "", chunks_total: 0, chunks_completed: 0, chunks_pending: 0, start_time: 0, eta_seconds: 0, completed_time: 0, queue_position: 0 } as any);
+    window.history.replaceState({}, '', '/');
   };
 
 
@@ -564,7 +566,7 @@ function HomeContent() {
                 </div>
                 
                 <div className="mb-8 w-full max-w-2xl mx-auto">
-                  <audio ref={vocalsAudioRef} src={`${baseUrl}/api/stream/${taskId}/vocals.wav`} preload="none" className="hidden" />
+                  <audio ref={vocalsAudioRef} src={`${baseUrl}/api/stream/${taskId}/vocals.wav`} preload="auto" className="hidden" />
                   <SmartCompareStudio 
                     originalUrl={`${baseUrl}/api/stream/${taskId}/original.wav`}
                     cleanedUrl={`${baseUrl}/api/stream/${taskId}/vocals.wav`}
