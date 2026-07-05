@@ -24,7 +24,6 @@ function HomeContent() {
   const [error, setError] = useState<string | null>(null);
   const vocalsAudioRef = useRef<HTMLAudioElement>(null);
 
-  const [activeTasks, setActiveTasks] = useState<any[]>([]);
   
   const { user, isLoaded, isSignedIn } = useUser();
   const { openSignIn } = useClerk();
@@ -154,28 +153,7 @@ function HomeContent() {
     setProgress({ step: "", percent: 0, message: "", chunks_total: 0, chunks_completed: 0, chunks_pending: 0, start_time: 0, eta_seconds: 0, completed_time: 0, queue_position: 0 } as any);
   };
 
-  // Auto-fetch all tasks
-  useEffect(() => {
-    const email = user?.primaryEmailAddress?.emailAddress;
-    if (!email) return;
 
-    const fetchTasks = async () => {
-      try {
-        const res = await fetch(`${baseUrl}/api/user/tasks?email=${encodeURIComponent(email)}`);
-        if (res.ok) {
-          const tasks = await res.json();
-          setActiveTasks(tasks);
-        }
-      } catch (err) {
-        console.error("Failed to fetch tasks", err);
-      }
-    };
-
-    fetchTasks();
-    const interval = setInterval(fetchTasks, 3000);
-    return () => clearInterval(interval);
-  }, [user?.primaryEmailAddress?.emailAddress, baseUrl]);
-  
   // Feature Toggles
   const [isolateVocals, setIsolateVocals] = useState<boolean>(false);
   const [enhance, setEnhance] = useState<boolean>(false);
@@ -728,41 +706,7 @@ function HomeContent() {
               <ExtractionFlowDiagram isProcessing={loading} progress={progress.percent} />
             )}
             
-            {/* Task Panel */}
-            {activeTasks.length > 0 && (
-              <div className="mt-8 border-t border-[#27272a] pt-8">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-xl font-bold text-white flex items-center gap-2"><List className="w-5 h-5" /> Your Tasks</h3>
-                  {taskId && (
-                    <button onClick={startNewUpload} className="bg-[#1877F2] hover:bg-[#1877F2]/90 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2">
-                      <Plus className="w-4 h-4" /> New Upload
-                    </button>
-                  )}
-                </div>
-                <div className="flex flex-col gap-3 max-h-64 overflow-y-auto pr-2">
-                  {activeTasks.map(task => (
-                    <div 
-                      key={task.task_id} 
-                      onClick={() => selectTask(task)}
-                      className={`p-4 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${taskId === task.task_id ? 'bg-[#1877F2]/10 border-[#1877F2]' : 'bg-[#0a0a0a] border-[#27272a] hover:border-gray-500'}`}
-                    >
-                      <div className="flex items-center gap-3">
-                        {task.status === 'processing' ? <Activity className="w-5 h-5 text-[#1877F2] animate-pulse" /> : 
-                         task.status === 'queued' ? <List className="w-5 h-5 text-yellow-500" /> :
-                         task.status === 'completed' ? <CheckCircle2 className="w-5 h-5 text-emerald-500" /> :
-                         <XCircle className="w-5 h-5 text-red-500" />
-                        }
-                        <div>
-                           <p className="text-sm text-white font-bold">{task.metadata?.filename || 'Audio File'} <span className="text-xs text-gray-500 font-normal ml-2">{task.task_id.substring(0, 8)}</span></p>
-                           <p className="text-xs text-gray-400 capitalize">{task.status} {task.status === 'processing' ? `${task.progress || 0}%` : ''} {task.status === 'queued' ? `(Pos: ${task.queue_position || '?'})` : ''}</p>
-                        </div>
-                      </div>
-                      <button className="text-xs text-gray-400 hover:text-white bg-[#111] px-3 py-1 rounded-lg">View</button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+
           </div>
         </div>
       </div>
