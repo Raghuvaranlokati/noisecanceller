@@ -187,8 +187,14 @@ def process_audio_file(
         if lyric_sync and target_audio_for_whisper.exists():
             progress_callback(80, "Transcribing vocals and generating synced lyrics...")
             import json
+            import torch
+            
+            # Auto-detect GPU for massive speed boosts if upgraded on Hugging Face
+            device = "cuda" if torch.cuda.is_available() else "cpu"
+            compute_type = "float16" if device == "cuda" else "int8"
+            
             # Use large-v3-turbo model for significantly better Telugu accuracy
-            model = WhisperModel("deepdml/faster-whisper-large-v3-turbo-ct2", device="cpu", compute_type="int8")
+            model = WhisperModel("deepdml/faster-whisper-large-v3-turbo-ct2", device=device, compute_type=compute_type)
             segments, info = model.transcribe(
                 str(target_audio_for_whisper), 
                 word_timestamps=True,
