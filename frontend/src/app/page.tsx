@@ -217,16 +217,46 @@ function HomeContent() {
 
 
     try {
-      const res = await fetch(`${baseUrl}/api/process`, {
-        method: "POST",
-        body: formData,
+      const data = await new Promise<any>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", `${baseUrl}/api/process`, true);
+        
+        // Track real-time upload progress
+        xhr.upload.onprogress = (event) => {
+          if (event.lengthComputable) {
+            const uploadPercent = Math.round((event.loaded / event.total) * 100);
+            // Cap the UI progress bar at 10% during upload phase
+            const uiPercent = Math.max(1, Math.min(10, Math.floor(uploadPercent / 10)));
+            setProgress({ 
+              step: "Uploading...", 
+              percent: uiPercent, 
+              message: `Sending file to cloud... ${uploadPercent}%`, 
+              chunks_total: 0, chunks_completed: 0, chunks_pending: 0, start_time: 0, eta_seconds: 0, completed_time: 0, queue_position: 0 
+            });
+          }
+        };
+        
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              resolve(JSON.parse(xhr.responseText));
+            } catch (e) {
+              reject(new Error("Invalid response from server"));
+            }
+          } else {
+            // Check if it's a payload too large error (HTTP 413)
+            if (xhr.status === 413) {
+              reject(new Error("File is too large! The Hugging Face free tier cannot accept files this big."));
+            } else {
+              reject(new Error("Failed to process file"));
+            }
+          }
+        };
+        
+        xhr.onerror = () => reject(new Error("Network error occurred during upload. Check your internet connection."));
+        xhr.send(formData);
       });
 
-      if (!res.ok) {
-        throw new Error("Failed to process file");
-      }
-
-      const data = await res.json();
       setTaskId(data.task_id);
       
       // Save to Firebase History
