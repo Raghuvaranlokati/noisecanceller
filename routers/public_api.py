@@ -59,8 +59,7 @@ async def public_process(
 
             False, # de_reverb
             False, # lyric_sync
-            user["email"],
-            None
+            user["email"]
         )
     })
     

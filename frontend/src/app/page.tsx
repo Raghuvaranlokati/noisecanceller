@@ -16,7 +16,6 @@ import Link from "next/link";
 
 function HomeContent() {
   const [file, setFile] = useState<File | null>(null);
-  const [metadataCsv, setMetadataCsv] = useState<File | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [progress, setProgress] = useState({ step: "", percent: 0, message: "", chunks_total: 0, chunks_completed: 0, chunks_pending: 0, start_time: 0, eta_seconds: 0, completed_time: 0, queue_position: 0 });
   const [resultZip, setResultZip] = useState<string | null>(null);
@@ -218,9 +217,7 @@ function HomeContent() {
 
     formData.append("email", user?.primaryEmailAddress?.emailAddress || "");
     
-    if (metadataCsv) {
-      formData.append("metadata_csv", metadataCsv);
-    }
+
 
     try {
       const res = await fetch(`${baseUrl}/api/process`, {
@@ -425,21 +422,6 @@ function HomeContent() {
                   <div className="flex flex-col items-center">
                     <h3 className="text-3xl text-emerald-400 font-bold mb-4 break-words mx-auto">{file.name}</h3>
                     
-                    <div className="mb-6 p-4 border border-[#27272a] rounded-xl bg-[#0a0a0a] w-full max-w-md">
-                      <label className="block text-sm text-gray-400 mb-3 font-bold">Optional: Metadata CSV for Forced Alignment</label>
-                      <input 
-                        type="file" 
-                        accept=".csv" 
-                        className="text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#1877F2]/10 file:text-[#1877F2] hover:file:bg-[#1877F2]/20 cursor-pointer"
-                        onChange={(e) => {
-                          if (e.target.files && e.target.files[0]) {
-                            setMetadataCsv(e.target.files[0]);
-                          }
-                        }}
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                      {metadataCsv && <p className="text-emerald-400 text-xs mt-2 text-left flex items-center gap-1"><Check className="w-3 h-3" /> {metadataCsv.name}</p>}
-                    </div>
 
 
 
@@ -608,18 +590,7 @@ function HomeContent() {
                           <input type="checkbox" checked={dlStems.instrumental} onChange={(e) => setDlStems({...dlStems, instrumental: e.target.checked})} className="accent-[#1877F2]" />
                           <span className="text-gray-300">Instrumental</span>
                         </label>
-                        {fourStem && (
-                          <>
-                            <label className="flex items-center gap-2 bg-[#1a1a1a] px-4 py-2 rounded-lg border border-[#27272a] cursor-pointer hover:border-gray-500 transition-colors">
-                              <input type="checkbox" checked={dlStems.drums} onChange={(e) => setDlStems({...dlStems, drums: e.target.checked})} className="accent-[#1877F2]" />
-                              <span className="text-gray-300">Drums</span>
-                            </label>
-                            <label className="flex items-center gap-2 bg-[#1a1a1a] px-4 py-2 rounded-lg border border-[#27272a] cursor-pointer hover:border-gray-500 transition-colors">
-                              <input type="checkbox" checked={dlStems.bass} onChange={(e) => setDlStems({...dlStems, bass: e.target.checked})} className="accent-[#1877F2]" />
-                              <span className="text-gray-300">Bass</span>
-                            </label>
-                          </>
-                        )}
+
                       </div>
                     </div>
                     
