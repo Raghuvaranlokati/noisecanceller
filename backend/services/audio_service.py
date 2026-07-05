@@ -9,7 +9,8 @@ from faster_whisper import WhisperModel
 
 from audio_separator.separator import Separator
 
-from pydub import AudioSegment
+import wave
+import soundfile as sf
 import torch
 import logging
 import threading
@@ -96,8 +97,10 @@ def process_audio_file(
         # Determine audio duration for progress simulators
         audio_duration = 0
         try:
-            audio_info = AudioSegment.from_wav(str(downloaded_audio_path))
-            audio_duration = len(audio_info) / 1000.0  # in seconds
+            with wave.open(str(downloaded_audio_path), "rb") as wav_f:
+                frames = wav_f.getnframes()
+                rate = wav_f.getframerate()
+                audio_duration = frames / float(rate)
         except:
             pass
         
@@ -152,30 +155,93 @@ def process_audio_file(
             if not target_for_enhance.exists():
                 target_for_enhance = downloaded_audio_path
                 
+            # Segment target_for_enhance WAV file into 5-minute chunks using FFmpeg's copy/segment
+            chunk_pattern = str(final_dir / "chunk_%03d.wav")
+            try:
+                subprocess.run([
+                    "ffmpeg", "-y", "-i", str(target_for_enhance),
+                    "-f", "segment", "-segment_time", "300",
+                    "-c", "copy", chunk_pattern
+                ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            except subprocess.CalledProcessError as e:
+                raise RuntimeError(f"FFmpeg segmenting failed: {e}")
+                
+            chunk_files = sorted(list(final_dir.glob("chunk_*.wav")))
+            enhanced_chunks = []
+            
+            if not chunk_files:
+                raise RuntimeError("No audio chunks generated for speech enhancement.")
+                
             model, df_state, _ = init_df()  # Load default DeepFilterNet3 model
-            audio, _ = load_audio(str(target_for_enhance), sr=df_state.sr())
             
             sim = ProgressSimulator(progress_callback, 70, 79, audio_duration * 0.2, "Enhancing vocal clarity using Studio Denoise AI...")
             sim.start()
             try:
-                enhanced = enhance(model, df_state, audio)
+                for idx, chunk_file in enumerate(chunk_files):
+                    # Load only the chunk's audio into memory
+                    audio, _ = load_audio(str(chunk_file), sr=df_state.sr())
+                    
+                    # Run DeepFilterNet vocal enhancement on it
+                    enhanced_chunk = enhance(model, df_state, audio)
+                    
+                    # Save result
+                    enhanced_chunk_path = final_dir / f"enhanced_chunk_{idx:03d}.wav"
+                    save_audio(str(enhanced_chunk_path), enhanced_chunk, df_state.sr())
+                    enhanced_chunks.append(enhanced_chunk_path)
+                    
+                    # Delete variables, run gc.collect() to clear PyTorch/Python tensors
+                    del audio
+                    del enhanced_chunk
+                    import gc
+                    gc.collect()
+                    if torch.cuda.is_available():
+                        torch.cuda.empty_cache()
             finally:
                 sim.stop()
-            
+                
+            # Free model variables
+            del model
+            del df_state
+            import gc
+            gc.collect()
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+                
+            # Concatenate the enhanced chunk WAV files back using FFmpeg's zero-copy copy concat demuxer
+            concat_list_path = final_dir / "concat_list.txt"
+            with open(concat_list_path, "w", encoding="utf-8") as f:
+                for chunk_path in enhanced_chunks:
+                    f.write(f"file '{Path(chunk_path).absolute().as_posix()}'\n")
+                    
             out_path = final_dir / "enhanced.wav"
-            save_audio(str(out_path), enhanced, df_state.sr())
+            try:
+                subprocess.run([
+                    "ffmpeg", "-y", "-f", "concat", "-safe", "0",
+                    "-i", str(concat_list_path),
+                    "-c", "copy", str(out_path)
+                ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            except subprocess.CalledProcessError as e:
+                raise RuntimeError(f"FFmpeg concatenation failed: {e}")
+            finally:
+                # Clean up temporary chunk files
+                for chunk_file in chunk_files:
+                    try:
+                        os.remove(chunk_file)
+                    except:
+                        pass
+                for chunk_path in enhanced_chunks:
+                    try:
+                        os.remove(chunk_path)
+                    except:
+                        pass
+                try:
+                    os.remove(concat_list_path)
+                except:
+                    pass
             
             # Replace the vocals file with the enhanced version if it exists
             if target_for_enhance.name == "vocals.wav":
                 shutil.copy(str(out_path), str(final_dir / "vocals.wav"))
-                
-            # Free memory explicitly to prevent OOM
-            del model
-            del df_state
-            del audio
-            del enhanced
-            import gc
-            gc.collect()
             
         # Step 5: Whisper Lyric Sync (Optional)
         target_audio_for_whisper = None
@@ -187,7 +253,6 @@ def process_audio_file(
         if lyric_sync and target_audio_for_whisper.exists():
             progress_callback(80, "Transcribing vocals and generating synced lyrics...")
             import json
-            import torch
             
             # Auto-detect GPU for massive speed boosts if upgraded on Hugging Face
             device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -212,13 +277,18 @@ def process_audio_file(
             dataset_audio_dir.mkdir(parents=True, exist_ok=True)
             dataset_metadata_path = dataset_dir / "metadata.csv"
             
-            # Load full audio for slicing
-            full_audio = AudioSegment.from_wav(str(target_audio_for_whisper))
-            
+            # SoundFile-based Seek-and-Slice for Dataset Generation
             timeline_markers = []
             prev_end = 0.0
             
-            with open(srt_path, "w", encoding="utf-8") as f, open(dataset_metadata_path, "w", encoding="utf-8") as metadata_f:
+            with open(srt_path, "w", encoding="utf-8") as f, \
+                 open(dataset_metadata_path, "w", encoding="utf-8") as metadata_f, \
+                 sf.SoundFile(str(target_audio_for_whisper), 'r') as sf_in:
+                
+                sr = sf_in.samplerate
+                subtype = sf_in.subtype
+                total_frames = sf_in.frames
+                
                 for i, segment in enumerate(segments, start=1):
                     # Native progress reporting based on timestamp
                     if audio_duration > 0:
@@ -254,13 +324,19 @@ def process_audio_file(
                         "text": text
                     })
                     
-                    # Dataset Generation
-                    start_ms = int(segment.start * 1000)
-                    end_ms = int(segment.end * 1000)
-                    chunk = full_audio[start_ms:end_ms]
-                    wav_filename = f"{i:04d}.wav"
-                    chunk.export(str(dataset_audio_dir / wav_filename), format="wav")
-                    metadata_f.write(f"audio/{wav_filename}|{text}\n")
+                    # Dataset Generation (SoundFile-based seek and slice)
+                    start_frame = int(segment.start * sr)
+                    end_frame = int(segment.end * sr)
+                    start_frame = max(0, min(start_frame, total_frames))
+                    end_frame = max(0, min(end_frame, total_frames))
+                    num_frames = end_frame - start_frame
+                    
+                    if num_frames > 0:
+                        sf_in.seek(start_frame)
+                        chunk_data = sf_in.read(num_frames)
+                        wav_filename = f"{i:04d}.wav"
+                        sf.write(str(dataset_audio_dir / wav_filename), chunk_data, sr, format="WAV", subtype=subtype)
+                        metadata_f.write(f"audio/{wav_filename}|{text}\n")
                     
                     if hasattr(segment, 'words') and segment.words:
                         for word_info in segment.words:
@@ -288,7 +364,6 @@ def process_audio_file(
                 
             # Free memory explicitly
             del model
-            del full_audio
             import gc
             gc.collect()
 
