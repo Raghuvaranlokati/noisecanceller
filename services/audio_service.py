@@ -12,6 +12,40 @@ from audio_separator.separator import Separator
 from pydub import AudioSegment
 import torch
 import logging
+import threading
+
+class ProgressSimulator:
+    def __init__(self, callback, start_pct, end_pct, duration_sec, message):
+        self.callback = callback
+        self.start_pct = start_pct
+        self.end_pct = end_pct
+        self.duration_sec = duration_sec if duration_sec > 0 else 60
+        self.message = message
+        self.stop_event = threading.Event()
+        self.thread = threading.Thread(target=self._run, daemon=True)
+        
+    def start(self):
+        self.thread.start()
+        
+    def stop(self):
+        self.stop_event.set()
+        if self.thread.is_alive():
+            self.thread.join(timeout=1.0)
+        
+    def _run(self):
+        start_time = time.time()
+        while not self.stop_event.is_set():
+            elapsed = time.time() - start_time
+            if elapsed >= self.duration_sec:
+                current_pct = self.end_pct - 1
+            else:
+                progress = elapsed / self.duration_sec
+                # Linear progress
+                current_pct = int(self.start_pct + (self.end_pct - self.start_pct) * progress)
+                current_pct = min(current_pct, self.end_pct - 1)
+                
+            self.callback(current_pct, self.message)
+            self.stop_event.wait(3.0)
 
 # Base directory for all temporary files during processing
 WORK_DIR = Path("temp_workdir")
@@ -80,7 +114,13 @@ def process_audio_file(
             
             if sep.model_instance is None:
                 raise RuntimeError(f"Failed to load separation model. The model may not have downloaded correctly.")
-            out_files = sep.separate(str(downloaded_audio_path))
+            
+            sim = ProgressSimulator(progress_callback, 40, 69, audio_duration * 1.5, "Running high-quality separation (this will take a while)...")
+            sim.start()
+            try:
+                out_files = sep.separate(str(downloaded_audio_path))
+            finally:
+                sim.stop()
             
             # audio-separator may return relative paths or just filenames.
             # Resolve them against the output directory to get the actual file path.
@@ -112,7 +152,13 @@ def process_audio_file(
                 
             model, df_state, _ = init_df()  # Load default DeepFilterNet3 model
             audio, _ = load_audio(str(target_for_enhance), sr=df_state.sr())
-            enhanced = enhance(model, df_state, audio)
+            
+            sim = ProgressSimulator(progress_callback, 70, 79, audio_duration * 0.2, "Enhancing vocal clarity using Studio Denoise AI...")
+            sim.start()
+            try:
+                enhanced = enhance(model, df_state, audio)
+            finally:
+                sim.stop()
             
             out_path = final_dir / "enhanced.wav"
             save_audio(str(out_path), enhanced, df_state.sr())
@@ -161,6 +207,11 @@ def process_audio_file(
             
             with open(srt_path, "w", encoding="utf-8") as f, open(dataset_metadata_path, "w", encoding="utf-8") as metadata_f:
                 for i, segment in enumerate(segments, start=1):
+                    # Native progress reporting based on timestamp
+                    if audio_duration > 0:
+                        pct = 80 + int(15 * (segment.end / audio_duration))
+                        progress_callback(min(pct, 95), "Transcribing vocals and generating synced lyrics...")
+                        
                     def format_time(seconds):
                         hours = int(seconds // 3600)
                         minutes = int((seconds % 3600) // 60)
