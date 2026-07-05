@@ -11,16 +11,19 @@ ENV HOME=/home/user \
 
 WORKDIR $HOME/app
 
-# Copy requirements and install
-COPY --chown=user requirements.txt .
+# Copy backend requirements and install
+COPY --chown=user backend/requirements.txt ./backend/
 RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+    pip install --no-cache-dir -r backend/requirements.txt
 
 # Copy application code
 COPY --chown=user . .
 
 # Expose Hugging Face default port
 EXPOSE 7860
+
+# Change working directory to backend
+WORKDIR $HOME/app/backend
 
 # Run the FastAPI server on port 7860
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "7860"]
