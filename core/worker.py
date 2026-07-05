@@ -36,16 +36,16 @@ def queue_worker():
                 if isinstance(job, tuple):
                     # Fallback for very old legacy tuple format
                     metadata_csv_path = None
-                    _, file_path, isolate_vocals, isolate_instrumental, four_stem, enhance_speech, de_reverb, lyric_sync, user_email = job[:9]
+                    _, file_path, isolate_vocals, enhance_speech, de_reverb, lyric_sync, user_email = job[:7]
                 else:
                     args = job.get("args")
-                    # Should be exactly 9 arguments now
-                    if len(args) == 9:
-                        file_path, isolate_vocals, isolate_instrumental, four_stem, enhance_speech, de_reverb, lyric_sync, user_email, metadata_csv_path = args
+                    # Should be exactly 7 arguments now
+                    if len(args) == 7:
+                        file_path, isolate_vocals, enhance_speech, de_reverb, lyric_sync, user_email, metadata_csv_path = args
                     else:
                         raise ValueError(f"Unexpected number of arguments in job: {len(args)}")
                         
-                run_audio_processing(task_id, file_path, isolate_vocals, isolate_instrumental, four_stem, enhance_speech, de_reverb, lyric_sync, user_email, metadata_csv_path)
+                run_audio_processing(task_id, file_path, isolate_vocals, enhance_speech, de_reverb, lyric_sync, user_email, metadata_csv_path)
             
             state.active_task_id = None
             job_queue.task_done()

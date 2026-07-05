@@ -30,8 +30,7 @@ def process_audio_file(
     task_id: str, 
     progress_callback: Callable[..., None],
     isolate_vocals: bool = False,
-    isolate_instrumental: bool = False,
-    four_stem: bool = False,
+
     enhance_speech: bool = False,
 
     de_reverb: bool = False,
@@ -66,7 +65,7 @@ def process_audio_file(
         shutil.copy(str(downloaded_audio_path), str(final_dir / "original.wav"))
         
         # Step 2: Stem Separation
-        if isolate_vocals or isolate_instrumental or four_stem:
+        if isolate_vocals:
             progress_callback(30, "Analyzing audio and isolating core stems (takes a few minutes)...")
             from core.state import state
             
@@ -80,12 +79,9 @@ def process_audio_file(
                 
             sep = create_separator(output_dir=final_dir, output_format="WAV")
             
-            # HIGH QUALITY MODE or 4-STEM MODE using MDX23C (best overall) or Demucs
+            # HIGH QUALITY MODE (MDX23C)
             progress_callback(40, "Running high-quality separation...")
-            if four_stem:
-                sep.load_model(model_filename='htdemucs.yaml')
-            else:
-                sep.load_model(model_filename='UVR-MDX-NET-Inst_HQ_3.onnx')
+            sep.load_model(model_filename='UVR-MDX-NET-Inst_HQ_3.onnx')
             
             if sep.model_instance is None:
                 raise RuntimeError(f"Failed to load separation model. The model may not have downloaded correctly.")
@@ -101,15 +97,9 @@ def process_audio_file(
                     print(f"WARNING: Separator output file not found: {f} (resolved: {f_path})")
                     continue
                 f_name = f_path.name.lower()
-                # Map htdemucs outputs to our expected names
+                
                 if "vocals" in f_name or "vocal" in f_name:
                     shutil.move(str(f_path), str(final_dir / "vocals.wav"))
-                elif "bass" in f_name:
-                    shutil.move(str(f_path), str(final_dir / "bass.wav"))
-                elif "drums" in f_name:
-                    shutil.move(str(f_path), str(final_dir / "drums.wav"))
-                elif "other" in f_name:
-                    shutil.move(str(f_path), str(final_dir / "instrumental.wav"))
                 elif "instrumental" in f_name or "inst" in f_name:
                     shutil.move(str(f_path), str(final_dir / "instrumental.wav"))
                         

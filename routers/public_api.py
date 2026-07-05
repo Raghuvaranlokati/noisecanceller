@@ -22,7 +22,7 @@ async def public_process(
     file: UploadFile = File(...),
     api_key: str = Form(...),
     isolate_vocals: bool = Form(True),
-    isolate_instrumental: bool = Form(True),
+
 ):
     """
     Public API Endpoint to trigger audio processing.
@@ -54,8 +54,7 @@ async def public_process(
         "args": (
             file_path, 
             isolate_vocals, 
-            isolate_instrumental, 
-            False, # four_stem
+
             False, # enhance_speech
 
             False, # de_reverb

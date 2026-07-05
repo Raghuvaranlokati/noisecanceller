@@ -18,8 +18,7 @@ function TaskStatusRow({ item, onDelete }: { item: any, onDelete: (id: string) =
     if (!opts) return [];
     const active = [];
     if (opts.isolateVocals) active.push("Vocals");
-    if (opts.isolateInstrumental) active.push("Instrumental");
-    if (opts.fourStem) active.push("4-Stem");
+
     if (opts.enhance) active.push("Enhance");
     if (opts.deReverb) active.push("De-Reverb");
     if (opts.lyricSync) active.push("Lyrics");

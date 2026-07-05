@@ -13,8 +13,7 @@ async def start_processing(
     file: UploadFile = File(...),
     email: str = Form(""),
     isolate_vocals: str = Form("false"),
-    isolate_instrumental: str = Form("false"),
-    four_stem: str = Form("false"),
+
     enhance_speech: str = Form("false"),
 
     de_reverb: str = Form("false"),
@@ -57,8 +56,7 @@ async def start_processing(
         "args": (
             file_path, 
             isolate_vocals.lower() == "true", 
-            isolate_instrumental.lower() == "true", 
-            four_stem.lower() == "true", 
+
             enhance_speech.lower() == "true", 
 
             de_reverb.lower() == "true", 
