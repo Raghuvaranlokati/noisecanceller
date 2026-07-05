@@ -31,8 +31,6 @@ def process_audio_file(
     isolate_vocals: bool = False,
 
     enhance_speech: bool = False,
-
-    de_reverb: bool = False,
     lyric_sync: bool = False,
     fast_mode: bool = True
 ) -> str:
@@ -126,29 +124,9 @@ def process_audio_file(
             import gc
             gc.collect()
             
-        # Step 4: AI De-Reverb (Optional)
-        if de_reverb and (final_dir / "vocals.wav").exists():
-            progress_callback(75, "Removing room echo using AI De-Reverb...")
-            sep_dereverb = create_separator(output_dir=final_dir, output_format="WAV")
-            # UVR-DeEcho-DeReverb is the standard model, but might take a minute to download on first run
-            sep_dereverb.load_model(model_filename='UVR-DeEcho-DeReverb.pth')
-            if sep_dereverb.model_instance is None:
-                raise RuntimeError("Failed to load De-Reverb model. The model may not have downloaded correctly.")
-            # Returns a list of strings [vocals_no_reverb.wav, reverb_only.wav]
-            out_files = sep_dereverb.separate(str(final_dir / "vocals.wav"))
-            # Assuming out_files[0] is the dry vocal, let's copy it over the original
-            if len(out_files) > 0:
-                f_path = Path(out_files[0])
-                if not f_path.is_absolute() or not f_path.exists():
-                    f_path = final_dir / f_path.name
-                if f_path.exists():
-                    shutil.copy(str(f_path), str(final_dir / "vocals_dry.wav"))
-
         # Step 5: Whisper Lyric Sync (Optional)
         target_audio_for_whisper = None
-        if (final_dir / "vocals_dry.wav").exists():
-            target_audio_for_whisper = final_dir / "vocals_dry.wav"
-        elif (final_dir / "vocals.wav").exists():
+        if (final_dir / "vocals.wav").exists():
             target_audio_for_whisper = final_dir / "vocals.wav"
         else:
             target_audio_for_whisper = final_dir / "original.wav"

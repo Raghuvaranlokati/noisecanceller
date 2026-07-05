@@ -159,7 +159,7 @@ function HomeContent() {
   const [isolateVocals, setIsolateVocals] = useState<boolean>(false);
   const [enhance, setEnhance] = useState<boolean>(false);
 
-  const [deReverb, setDeReverb] = useState<boolean>(false);
+
   const [lyricSync, setLyricSync] = useState<boolean>(false);
 
 
@@ -209,8 +209,6 @@ function HomeContent() {
     formData.append("file", file);
     formData.append("isolate_vocals", isolateVocals.toString());
     formData.append("enhance_speech", enhance.toString());
-
-    formData.append("de_reverb", deReverb.toString());
     formData.append("lyric_sync", lyricSync.toString());
 
 
@@ -242,7 +240,6 @@ function HomeContent() {
             options: {
               isolateVocals,
               enhance,
-              deReverb,
               lyricSync
             }
           });
@@ -348,26 +345,7 @@ function HomeContent() {
             
             <div className="space-y-3">
 
-              <button 
-                onClick={() => setDeReverb(!deReverb)}
-                className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all text-left relative overflow-hidden group ${
-                  deReverb 
-                    ? 'bg-cyan-500/10 border-cyan-500 shadow-[0_0_15px_rgba(6,182,212,0.15)]' 
-                    : 'bg-[#050505] border-[#27272a] hover:border-gray-500'
-                }`}
-              >
-                <div className={`absolute top-0 left-0 w-1 h-full ${deReverb ? 'bg-cyan-500' : 'bg-transparent'}`}></div>
-                <div className="flex items-center gap-3">
-                  <Mic2 className={`w-5 h-5 ${deReverb ? 'text-cyan-500' : 'text-gray-500'}`} />
-                  <div className="flex flex-col">
-                    <span className={`font-bold ${deReverb ? 'text-white' : 'text-gray-300'}`}>AI De-Reverb <span className="ml-2 text-[9px] bg-cyan-500/20 text-cyan-500 px-2 py-0.5 rounded font-bold uppercase">Pro</span></span>
-                    <span className="text-[10px] text-gray-500">Extract completely dry studio vocals</span>
-                  </div>
-                </div>
-                <div className={`w-12 h-6 rounded-full p-1 transition-colors ${deReverb ? 'bg-cyan-500' : 'bg-[#27272a]'}`}>
-                  <div className={`w-4 h-4 bg-white rounded-full transition-transform ${deReverb ? 'translate-x-6' : 'translate-x-0'}`} />
-                </div>
-              </button>
+
 
               <button 
                 onClick={() => setLyricSync(!lyricSync)}

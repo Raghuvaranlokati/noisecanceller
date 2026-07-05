@@ -57,7 +57,6 @@ async def public_process(
 
             False, # enhance_speech
 
-            False, # de_reverb
             False, # lyric_sync
             user["email"]
         )

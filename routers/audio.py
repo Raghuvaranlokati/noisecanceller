@@ -8,6 +8,16 @@ from core.database import db_manager
 
 router = APIRouter(prefix="/api")
 
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException
+import uuid
+import os
+import shutil
+import time
+from core.state import job_queue
+from core.database import db_manager
+
+router = APIRouter(prefix="/api")
+
 @router.post("/process")
 async def start_processing(
     file: UploadFile = File(...),
@@ -15,8 +25,6 @@ async def start_processing(
     isolate_vocals: str = Form("false"),
 
     enhance_speech: str = Form("false"),
-
-    de_reverb: str = Form("false"),
     lyric_sync: str = Form("false"),
 ):
     if not file:
@@ -50,8 +58,6 @@ async def start_processing(
             isolate_vocals.lower() == "true", 
 
             enhance_speech.lower() == "true", 
-
-            de_reverb.lower() == "true", 
             lyric_sync.lower() == "true", 
             email
         )
