@@ -71,30 +71,3 @@ async def start_processing(
 
     return {"task_id": task_id}
 
-@router.post("/health")
-async def check_audio_health(
-    file: UploadFile = File(...)
-):
-    if not file:
-        raise HTTPException(status_code=400, detail="File is required")
-        
-    task_id = str(uuid.uuid4())
-    os.makedirs("downloads", exist_ok=True)
-    file_path = os.path.join("downloads", f"health_{task_id}_{file.filename}")
-    
-    try:
-        with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-            
-        from services.health_service import analyze_audio_health
-        health_report = analyze_audio_health(file_path)
-        
-        # Clean up the temp file
-        if os.path.exists(file_path):
-            os.remove(file_path)
-            
-        return health_report
-    except Exception as e:
-        if os.path.exists(file_path):
-            os.remove(file_path)
-        raise HTTPException(status_code=500, detail=str(e))
