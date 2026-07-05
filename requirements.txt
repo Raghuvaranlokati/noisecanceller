@@ -5,7 +5,7 @@ torchaudio==2.3.1+cpu
 numpy>=1.26.0
 scipy>=1.11.4
 onnx
-tensorflow>=2.15.0
+
 fastapi
 uvicorn
 pydantic
@@ -13,10 +13,10 @@ python-multipart
 demucs
 torchcodec
 soundfile
-basic-pitch==0.3.0
+
 faster-whisper
 audio-separator[cpu]
-pyannote.audio
+
 huggingface-hub==0.22.2
 pydub
 
