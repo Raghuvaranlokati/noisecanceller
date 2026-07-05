@@ -169,10 +169,7 @@ function HomeContent() {
   const [dlChunked, setDlChunked] = useState<boolean>(true);
   const [dlFolderName, setDlFolderName] = useState<string>("My_Song_Stems");
   const [dlStems, setDlStems] = useState<Record<string, boolean>>({
-    vocals: true,
-    instrumental: true,
-    drums: true,
-    bass: true
+    vocals: true
   });
 
 
@@ -587,10 +584,6 @@ function HomeContent() {
                         <label className="flex items-center gap-2 bg-[#1a1a1a] px-4 py-2 rounded-lg border border-[#27272a] cursor-pointer hover:border-gray-500 transition-colors">
                           <input type="checkbox" checked={dlStems.vocals} onChange={(e) => setDlStems({...dlStems, vocals: e.target.checked})} className="accent-[#1877F2]" />
                           <span className="text-gray-300">Vocals</span>
-                        </label>
-                        <label className="flex items-center gap-2 bg-[#1a1a1a] px-4 py-2 rounded-lg border border-[#27272a] cursor-pointer hover:border-gray-500 transition-colors">
-                          <input type="checkbox" checked={dlStems.instrumental} onChange={(e) => setDlStems({...dlStems, instrumental: e.target.checked})} className="accent-[#1877F2]" />
-                          <span className="text-gray-300">Instrumental</span>
                         </label>
 
                       </div>
