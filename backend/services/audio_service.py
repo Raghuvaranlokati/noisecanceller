@@ -93,18 +93,18 @@ def process_audio_file(
         final_dir.mkdir(exist_ok=True)
         shutil.copy(str(downloaded_audio_path), str(final_dir / "original.wav"))
         
+        # Determine audio duration for progress simulators
+        audio_duration = 0
+        try:
+            audio_info = AudioSegment.from_wav(str(downloaded_audio_path))
+            audio_duration = len(audio_info) / 1000.0  # in seconds
+        except:
+            pass
+        
         # Step 2: Stem Separation
         if isolate_vocals:
             progress_callback(30, "Analyzing audio and isolating core stems (takes a few minutes)...")
             from core.state import state
-            
-            # Check audio length for auto fallback
-            audio_duration = 0
-            try:
-                audio_info = AudioSegment.from_wav(str(downloaded_audio_path))
-                audio_duration = len(audio_info) / 1000.0  # in seconds
-            except:
-                pass
                 
             sep = create_separator(output_dir=final_dir, output_format="WAV")
             
