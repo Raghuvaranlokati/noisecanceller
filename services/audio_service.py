@@ -6,10 +6,9 @@ import time
 from pathlib import Path
 from typing import Callable
 from faster_whisper import WhisperModel
-from basic_pitch.inference import predict_and_save
-from basic_pitch import ICASSP_2022_MODEL_PATH
+
 from audio_separator.separator import Separator
-from pyannote.audio import Pipeline
+
 from pydub import AudioSegment
 import torch
 import logging
