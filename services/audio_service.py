@@ -78,67 +78,40 @@ def process_audio_file(
             except:
                 pass
                 
-            if audio_duration > 600:
-                fast_mode = True # Force fast mode for > 10 min audio
-                
             sep = create_separator(output_dir=final_dir, output_format="WAV")
             
-            if fast_mode and not four_stem:
-                # FAST CPU MODE (MDX-Net via audio-separator)
-                progress_callback(40, "Running high-speed MDX-Net separation...")
-                # UVR-MDX-NET-Voc_FT is blazingly fast on CPU and highly accurate for Vocals vs Instrumental
-                sep.load_model(model_filename='UVR-MDX-NET-Voc_FT.onnx')
-                if sep.model_instance is None:
-                    raise RuntimeError("Failed to load MDX-Net model. The model may not have downloaded correctly.")
-                out_files = sep.separate(str(downloaded_audio_path))
-                
-                # audio-separator may return relative paths or just filenames.
-                # Resolve them against the output directory to get the actual file path.
-                for f in out_files:
-                    f_path = Path(f)
-                    if not f_path.is_absolute() or not f_path.exists():
-                        f_path = final_dir / f_path.name
-                    if not f_path.exists():
-                        print(f"WARNING: Separator output file not found: {f} (resolved: {f_path})")
-                        continue
-                    f_name = f_path.name.lower()
-                    if "vocals" in f_name or "vocal" in f_name:
-                        shutil.move(str(f_path), str(final_dir / "vocals.wav"))
-                    elif "instrumental" in f_name or "inst" in f_name:
-                        shutil.move(str(f_path), str(final_dir / "instrumental.wav"))
+            # HIGH QUALITY MODE or 4-STEM MODE using MDX23C (best overall) or Demucs
+            progress_callback(40, "Running high-quality separation...")
+            if four_stem:
+                sep.load_model(model_filename='htdemucs.yaml')
             else:
-                # HIGH QUALITY MODE or 4-STEM MODE using MDX23C (best overall) or Demucs
-                progress_callback(40, "Running high-quality separation...")
-                if four_stem:
-                    sep.load_model(model_filename='htdemucs.yaml')
-                else:
-                    sep.load_model(model_filename='UVR-MDX-NET-Inst_HQ_3.onnx')
-                
-                if sep.model_instance is None:
-                    raise RuntimeError(f"Failed to load separation model. The model may not have downloaded correctly.")
-                out_files = sep.separate(str(downloaded_audio_path))
-                
-                # audio-separator may return relative paths or just filenames.
-                # Resolve them against the output directory to get the actual file path.
-                for f in out_files:
-                    f_path = Path(f)
-                    if not f_path.is_absolute() or not f_path.exists():
-                        f_path = final_dir / f_path.name
-                    if not f_path.exists():
-                        print(f"WARNING: Separator output file not found: {f} (resolved: {f_path})")
-                        continue
-                    f_name = f_path.name.lower()
-                    # Map htdemucs outputs to our expected names
-                    if "vocals" in f_name or "vocal" in f_name:
-                        shutil.move(str(f_path), str(final_dir / "vocals.wav"))
-                    elif "bass" in f_name:
-                        shutil.move(str(f_path), str(final_dir / "bass.wav"))
-                    elif "drums" in f_name:
-                        shutil.move(str(f_path), str(final_dir / "drums.wav"))
-                    elif "other" in f_name:
-                        shutil.move(str(f_path), str(final_dir / "instrumental.wav"))
-                    elif "instrumental" in f_name or "inst" in f_name:
-                        shutil.move(str(f_path), str(final_dir / "instrumental.wav"))
+                sep.load_model(model_filename='UVR-MDX-NET-Inst_HQ_3.onnx')
+            
+            if sep.model_instance is None:
+                raise RuntimeError(f"Failed to load separation model. The model may not have downloaded correctly.")
+            out_files = sep.separate(str(downloaded_audio_path))
+            
+            # audio-separator may return relative paths or just filenames.
+            # Resolve them against the output directory to get the actual file path.
+            for f in out_files:
+                f_path = Path(f)
+                if not f_path.is_absolute() or not f_path.exists():
+                    f_path = final_dir / f_path.name
+                if not f_path.exists():
+                    print(f"WARNING: Separator output file not found: {f} (resolved: {f_path})")
+                    continue
+                f_name = f_path.name.lower()
+                # Map htdemucs outputs to our expected names
+                if "vocals" in f_name or "vocal" in f_name:
+                    shutil.move(str(f_path), str(final_dir / "vocals.wav"))
+                elif "bass" in f_name:
+                    shutil.move(str(f_path), str(final_dir / "bass.wav"))
+                elif "drums" in f_name:
+                    shutil.move(str(f_path), str(final_dir / "drums.wav"))
+                elif "other" in f_name:
+                    shutil.move(str(f_path), str(final_dir / "instrumental.wav"))
+                elif "instrumental" in f_name or "inst" in f_name:
+                    shutil.move(str(f_path), str(final_dir / "instrumental.wav"))
                         
             import gc
             gc.collect()

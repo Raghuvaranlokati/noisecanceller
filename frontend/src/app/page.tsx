@@ -186,7 +186,7 @@ function HomeContent() {
   const [deReverb, setDeReverb] = useState<boolean>(false);
   const [lyricSync, setLyricSync] = useState<boolean>(false);
 
-  const [fastMode, setFastMode] = useState<boolean>(true);
+
 
   // Download Customization Options
   const [dlFormat, setDlFormat] = useState<string>("mp3");
@@ -261,7 +261,7 @@ function HomeContent() {
     formData.append("de_reverb", deReverb.toString());
     formData.append("lyric_sync", lyricSync.toString());
 
-    formData.append("fast_mode", fastMode.toString());
+
     formData.append("email", user?.primaryEmailAddress?.emailAddress || "");
     
     if (metadataCsv) {
@@ -295,8 +295,7 @@ function HomeContent() {
               fourStem,
               enhance,
               deReverb,
-              lyricSync,
-              fastMode
+              lyricSync
             }
           });
         } catch (fbErr) {
@@ -488,26 +487,7 @@ function HomeContent() {
                 </div>
               </button>
 
-              <button 
-                onClick={() => setFastMode(!fastMode)}
-                className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all text-left relative overflow-hidden group ${
-                  fastMode 
-                    ? 'bg-emerald-500/10 border-emerald-500 shadow-[0_0_15px_rgba(10,185,129,0.15)]' 
-                    : 'bg-[#050505] border-[#27272a] hover:border-gray-500'
-                }`}
-              >
-                <div className={`absolute top-0 left-0 w-1 h-full ${fastMode ? 'bg-emerald-500' : 'bg-transparent'}`}></div>
-                <div className="flex items-center gap-3">
-                  <Zap className={`w-5 h-5 ${fastMode ? 'text-emerald-500' : 'text-gray-500'}`} />
-                  <div className="flex flex-col">
-                    <span className={`font-bold ${fastMode ? 'text-white' : 'text-gray-300'}`}>Fast CPU Mode</span>
-                    <span className="text-[10px] text-gray-500">Uses MDX-Net. Uncheck for High Quality (Demucs).</span>
-                  </div>
-                </div>
-                <div className={`w-12 h-6 rounded-full p-1 transition-colors ${fastMode ? 'bg-emerald-500' : 'bg-[#27272a]'}`}>
-                  <div className={`w-4 h-4 bg-white rounded-full transition-transform ${fastMode ? 'translate-x-6' : 'translate-x-0'}`} />
-                </div>
-              </button>
+
             </div>
             
             <div className="mt-auto pt-8">
