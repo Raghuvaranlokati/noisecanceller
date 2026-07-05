@@ -138,6 +138,8 @@ def process_audio_file(
                 elif "instrumental" in f_name or "inst" in f_name:
                     shutil.move(str(f_path), str(final_dir / "instrumental.wav"))
                         
+            # Free memory explicitly to prevent Hugging Face OOM crashes
+            del sep
             import gc
             gc.collect()
         
@@ -167,6 +169,11 @@ def process_audio_file(
             if target_for_enhance.name == "vocals.wav":
                 shutil.copy(str(out_path), str(final_dir / "vocals.wav"))
                 
+            # Free memory explicitly to prevent OOM
+            del model
+            del df_state
+            del audio
+            del enhanced
             import gc
             gc.collect()
             
@@ -272,6 +279,12 @@ def process_audio_file(
             timeline_path = final_dir / "timeline_markers.json"
             with open(timeline_path, "w", encoding="utf-8") as tf:
                 json.dump({"markers": timeline_markers}, tf, indent=2)
+                
+            # Free memory explicitly
+            del model
+            del full_audio
+            import gc
+            gc.collect()
 
         # Step 9: Zip the results
         progress_callback(90, "Finalizing and packaging your stems...")
