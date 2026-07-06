@@ -271,19 +271,30 @@ def process_audio_file(
             json_path = final_dir / "transcript.json"
             word_list = []
             
+            # Convert audio to XTTS standard (Mono, 24000Hz)
+            progress_callback(80, "Converting audio to 24kHz Mono for XTTS dataset...")
+            target_xtts = final_dir / "target_xtts.wav"
+            try:
+                subprocess.run([
+                    "ffmpeg", "-y", "-i", str(target_audio_for_whisper),
+                    "-ar", "24000", "-ac", "1", str(target_xtts)
+                ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            except subprocess.CalledProcessError as e:
+                raise RuntimeError(f"FFmpeg XTTS conversion failed: {e}")
+
             # Dataset Setup
             dataset_dir = final_dir / "dataset"
-            dataset_audio_dir = dataset_dir / "audio"
+            dataset_audio_dir = dataset_dir / "wavs"
             dataset_audio_dir.mkdir(parents=True, exist_ok=True)
-            dataset_metadata_path = dataset_dir / "metadata.csv"
+            
+            dataset_metadata = []
             
             # SoundFile-based Seek-and-Slice for Dataset Generation
             timeline_markers = []
             prev_end = 0.0
             
             with open(srt_path, "w", encoding="utf-8") as f, \
-                 open(dataset_metadata_path, "w", encoding="utf-8") as metadata_f, \
-                 sf.SoundFile(str(target_audio_for_whisper), 'r') as sf_in:
+                 sf.SoundFile(str(target_xtts), 'r') as sf_in:
                 
                 sr = sf_in.samplerate
                 subtype = sf_in.subtype
@@ -335,8 +346,9 @@ def process_audio_file(
                         sf_in.seek(start_frame)
                         chunk_data = sf_in.read(num_frames)
                         wav_filename = f"{i:04d}.wav"
+                        wav_id = f"{i:04d}"
                         sf.write(str(dataset_audio_dir / wav_filename), chunk_data, sr, format="WAV", subtype=subtype)
-                        metadata_f.write(f"audio/{wav_filename}|{text}\n")
+                        dataset_metadata.append(f"{wav_id}|{text}|{text}\n")
                     
                     if hasattr(segment, 'words') and segment.words:
                         for word_info in segment.words:
@@ -348,6 +360,23 @@ def process_audio_file(
                             
             with open(json_path, "w", encoding="utf-8") as jf:
                 json.dump({"words": word_list}, jf, indent=2)
+                
+            # Finalize Dataset Splits (Train/Eval/Metadata)
+            import random
+            # Make a copy for consistent original order in metadata, shuffle for splits
+            dataset_metadata_shuffled = dataset_metadata.copy()
+            random.shuffle(dataset_metadata_shuffled)
+            
+            split_idx = int(len(dataset_metadata_shuffled) * 0.9)
+            train_data = dataset_metadata_shuffled[:split_idx]
+            eval_data = dataset_metadata_shuffled[split_idx:]
+            
+            with open(dataset_dir / "metadata.csv", "w", encoding="utf-8") as mf:
+                mf.writelines(dataset_metadata)
+            with open(dataset_dir / "train.csv", "w", encoding="utf-8") as tr_f:
+                tr_f.writelines(train_data)
+            with open(dataset_dir / "eval.csv", "w", encoding="utf-8") as ev_f:
+                ev_f.writelines(eval_data)
                 
             csv_path = final_dir / "transcript.csv"
             import csv
@@ -366,6 +395,11 @@ def process_audio_file(
             del model
             import gc
             gc.collect()
+            
+            try:
+                os.remove(str(target_xtts))
+            except:
+                pass
 
         # Step 9: Zip the results
         progress_callback(90, "Finalizing and packaging your stems...")
