@@ -283,7 +283,7 @@ def process_audio_file(
                 raise RuntimeError(f"FFmpeg XTTS conversion failed: {e}")
 
             # Dataset Setup
-            dataset_dir = final_dir / "dataset"
+            dataset_dir = final_dir / "final_dataset"
             dataset_audio_dir = dataset_dir / "wavs"
             dataset_audio_dir.mkdir(parents=True, exist_ok=True)
             
@@ -413,7 +413,7 @@ def process_audio_file(
                     
                     # Determine target folder for architecture
                     arc_folder = ""
-                    if rel_path.startswith("dataset"):
+                    if rel_path.startswith("final_dataset"):
                         # Preserve dataset folder structure exactly
                         arcname = f"Stemify_Project/Transcripts/{rel_path.replace(os.sep, '/')}"
                         zipf.write(file_path, arcname=arcname)
