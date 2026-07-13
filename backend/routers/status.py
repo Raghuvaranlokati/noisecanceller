@@ -181,7 +181,7 @@ async def custom_download(
         return FileResponse(
             zip_path,
             media_type="application/zip",
-            filename=f"{folder_name}_{task_id}.zip"
+            filename=f"{folder_name}.zip"
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
