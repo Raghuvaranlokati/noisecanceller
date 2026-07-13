@@ -4,7 +4,7 @@ from core.database import db_manager
 from services.audio_service import process_audio_file
 
 
-def run_audio_processing(task_id: str, file_path: str, isolate_vocals: bool, enhance_speech: bool, lyric_sync: bool, user_email: str):
+def run_audio_processing(task_id: str, file_path: str, isolate_vocals: bool, stem_count: int, de_reverb: bool, enhance_speech: bool, lyric_sync: bool, user_email: str):
     try:
         def progress_callback(progress_percent, message, **kwargs):
             update_data = {
@@ -19,6 +19,8 @@ def run_audio_processing(task_id: str, file_path: str, isolate_vocals: bool, enh
             task_id, 
             progress_callback,
             isolate_vocals=isolate_vocals,
+            stem_count=stem_count,
+            de_reverb=de_reverb,
             enhance_speech=enhance_speech,
             lyric_sync=lyric_sync
         )

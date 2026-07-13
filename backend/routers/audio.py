@@ -23,7 +23,8 @@ async def start_processing(
     file: UploadFile = File(...),
     email: str = Form(""),
     isolate_vocals: str = Form("false"),
-
+    stem_count: int = Form(2),
+    de_reverb: str = Form("false"),
     enhance_speech: str = Form("false"),
     lyric_sync: str = Form("false"),
 ):
@@ -43,20 +44,27 @@ async def start_processing(
         "message": "Placed in queue...",
         "created_at": time.time(),
         "user_email": email,
-        "metadata": {"filename": file.filename}
+        "metadata": {"filename": file.filename},
+        "options": {
+            "isolateVocals": isolate_vocals.lower() == "true",
+            "stemCount": stem_count,
+            "deReverb": de_reverb.lower() == "true",
+            "enhance": enhance_speech.lower() == "true",
+            "lyricSync": lyric_sync.lower() == "true"
+        }
     })
     
     if email:
         db_manager.ensure_user(email)
     
-
     job_queue.put({
         "type": "audio",
         "task_id": task_id,
         "args": (
             file_path, 
             isolate_vocals.lower() == "true", 
-
+            stem_count,
+            de_reverb.lower() == "true",
             enhance_speech.lower() == "true", 
             lyric_sync.lower() == "true", 
             email

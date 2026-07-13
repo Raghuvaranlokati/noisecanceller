@@ -58,7 +58,7 @@ export default function SyncedTranscriptPlayer({
     const handleTimeUpdate = () => setCurrentTime(audioEl.currentTime);
     audioEl.addEventListener('timeupdate', handleTimeUpdate);
     return () => audioEl.removeEventListener('timeupdate', handleTimeUpdate);
-  }, [audioRef, audioRef.current]);
+  }, [audioRef]);
 
   // Auto-scroll to active word if not searching
   useEffect(() => {

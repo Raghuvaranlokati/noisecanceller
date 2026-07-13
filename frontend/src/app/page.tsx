@@ -157,6 +157,8 @@ function HomeContent() {
 
   // Feature Toggles
   const [isolateVocals, setIsolateVocals] = useState<boolean>(false);
+  const [stemCount, setStemCount] = useState<number>(2);
+  const [deReverb, setDeReverb] = useState<boolean>(false);
   const [enhance, setEnhance] = useState<boolean>(false);
 
 
@@ -169,7 +171,11 @@ function HomeContent() {
   const [dlChunked, setDlChunked] = useState<boolean>(true);
   const [dlFolderName, setDlFolderName] = useState<string>("My_Song_Stems");
   const [dlStems, setDlStems] = useState<Record<string, boolean>>({
-    vocals: true
+    vocals: true,
+    instrumental: true,
+    drums: true,
+    bass: true,
+    other: true
   });
 
 
@@ -208,6 +214,8 @@ function HomeContent() {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("isolate_vocals", isolateVocals.toString());
+    formData.append("stem_count", stemCount.toString());
+    formData.append("de_reverb", deReverb.toString());
     formData.append("enhance_speech", enhance.toString());
     formData.append("lyric_sync", lyricSync.toString());
 
@@ -269,6 +277,8 @@ function HomeContent() {
             createdAt: serverTimestamp(),
             options: {
               isolateVocals,
+              stemCount,
+              deReverb,
               enhance,
               lyricSync
             }
@@ -341,6 +351,31 @@ function HomeContent() {
                 </div>
               </button>
 
+              {isolateVocals && (
+                <div className="pl-4 border-l-2 border-[#27272a] space-y-3 mt-2 mb-4">
+                  <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-300 hover:text-white transition-colors">
+                    <input 
+                      type="radio" 
+                      name="stemCount" 
+                      checked={stemCount === 2} 
+                      onChange={() => setStemCount(2)}
+                      className="accent-[#1877F2]"
+                    />
+                    2 Stems (Vocals + Instrumental)
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-300 hover:text-white transition-colors">
+                    <input 
+                      type="radio" 
+                      name="stemCount" 
+                      checked={stemCount === 4} 
+                      onChange={() => setStemCount(4)}
+                      className="accent-[#1877F2]"
+                    />
+                    4 Stems (Vocals, Drums, Bass, Other)
+                  </label>
+                </div>
+              )}
+
               <button 
                 onClick={() => setEnhance(!enhance)}
                 className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all text-left ${
@@ -361,6 +396,28 @@ function HomeContent() {
                 {/* Custom Toggle Switch UI */}
                 <div className={`w-12 h-6 rounded-full p-1 transition-colors ${enhance ? 'bg-purple-500' : 'bg-[#27272a]'}`}>
                   <div className={`w-4 h-4 bg-white rounded-full transition-transform ${enhance ? 'translate-x-6' : 'translate-x-0'}`} />
+                </div>
+              </button>
+
+              <button 
+                onClick={() => setDeReverb(!deReverb)}
+                className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all text-left ${
+                  deReverb 
+                    ? 'bg-cyan-500/10 border-cyan-500 shadow-[0_0_15px_rgba(6,182,212,0.15)]' 
+                    : 'bg-[#050505] border-[#27272a] hover:border-gray-500'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${deReverb ? 'bg-cyan-500 text-white' : 'bg-[#18191A] text-gray-400'}`}>
+                    <Activity className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className={`font-bold ${deReverb ? 'text-white' : 'text-gray-300'}`}>De-Reverb</h3>
+                    <p className="text-xs text-gray-500">Remove echo and room reverb</p>
+                  </div>
+                </div>
+                <div className={`w-12 h-6 rounded-full p-1 transition-colors ${deReverb ? 'bg-cyan-500' : 'bg-[#27272a]'}`}>
+                  <div className={`w-4 h-4 bg-white rounded-full transition-transform ${deReverb ? 'translate-x-6' : 'translate-x-0'}`} />
                 </div>
               </button>
             </div>
@@ -593,7 +650,22 @@ function HomeContent() {
                           <input type="checkbox" checked={dlStems.vocals} onChange={(e) => setDlStems({...dlStems, vocals: e.target.checked})} className="accent-[#1877F2]" />
                           <span className="text-gray-300">Vocals</span>
                         </label>
-
+                        <label className="flex items-center gap-2 bg-[#1a1a1a] px-4 py-2 rounded-lg border border-[#27272a] cursor-pointer hover:border-gray-500 transition-colors">
+                          <input type="checkbox" checked={dlStems.instrumental} onChange={(e) => setDlStems({...dlStems, instrumental: e.target.checked})} className="accent-[#1877F2]" />
+                          <span className="text-gray-300">Instrumental</span>
+                        </label>
+                        <label className="flex items-center gap-2 bg-[#1a1a1a] px-4 py-2 rounded-lg border border-[#27272a] cursor-pointer hover:border-gray-500 transition-colors">
+                          <input type="checkbox" checked={dlStems.drums} onChange={(e) => setDlStems({...dlStems, drums: e.target.checked})} className="accent-[#1877F2]" />
+                          <span className="text-gray-300">Drums</span>
+                        </label>
+                        <label className="flex items-center gap-2 bg-[#1a1a1a] px-4 py-2 rounded-lg border border-[#27272a] cursor-pointer hover:border-gray-500 transition-colors">
+                          <input type="checkbox" checked={dlStems.bass} onChange={(e) => setDlStems({...dlStems, bass: e.target.checked})} className="accent-[#1877F2]" />
+                          <span className="text-gray-300">Bass</span>
+                        </label>
+                        <label className="flex items-center gap-2 bg-[#1a1a1a] px-4 py-2 rounded-lg border border-[#27272a] cursor-pointer hover:border-gray-500 transition-colors">
+                          <input type="checkbox" checked={dlStems.other} onChange={(e) => setDlStems({...dlStems, other: e.target.checked})} className="accent-[#1877F2]" />
+                          <span className="text-gray-300">Other</span>
+                        </label>
                       </div>
                     </div>
                     
@@ -677,7 +749,7 @@ function HomeContent() {
                 }}
               />
             ) : (
-              <ExtractionFlowDiagram isProcessing={loading} progress={progress.percent} />
+              <ExtractionFlowDiagram isProcessing={loading} progress={progress.percent} stemCount={stemCount} isolateVocals={isolateVocals} />
             )}
             
 

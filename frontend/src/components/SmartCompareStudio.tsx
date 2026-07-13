@@ -12,6 +12,10 @@ interface SmartCompareStudioProps {
 
 export default function SmartCompareStudio({ originalUrl, cleanedUrl, audioRef }: SmartCompareStudioProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const originalContainerRef = useRef<HTMLDivElement>(null);
+  const originalAudioRef = useRef<HTMLAudioElement>(null);
+  const localCleanedAudioRef = useRef<HTMLAudioElement>(null);
+  
   const [isPlaying, setIsPlaying] = useState(false);
   const [activeTrack, setActiveTrack] = useState<'original' | 'cleaned'>('cleaned');
   const [isReady, setIsReady] = useState(false);
@@ -20,18 +24,26 @@ export default function SmartCompareStudio({ originalUrl, cleanedUrl, audioRef }
   const cleanedWs = useRef<WaveSurfer | null>(null);
 
   useEffect(() => {
-    if (!containerRef.current) return;
+    if (!containerRef.current || !originalContainerRef.current) return;
 
     // Initialize Original Waveform (Hidden from view but plays audio when active)
-    originalWs.current = WaveSurfer.create({
-      container: document.createElement('div'), // Off-DOM
+    const originalOptions: any = {
+      container: originalContainerRef.current,
       waveColor: '#3f3f46',
       progressColor: '#71717a',
-      url: originalUrl,
-    });
+      height: 10,
+    };
+    
+    if (originalAudioRef.current) {
+      originalOptions.media = originalAudioRef.current;
+    } else {
+      originalOptions.url = originalUrl;
+    }
+    
+    originalWs.current = WaveSurfer.create(originalOptions);
 
     // Initialize Cleaned Waveform (Visible)
-    const options: any = {
+    const cleanedOptions: any = {
       container: containerRef.current,
       waveColor: '#1877F2',
       progressColor: '#60A5FA',
@@ -43,20 +55,28 @@ export default function SmartCompareStudio({ originalUrl, cleanedUrl, audioRef }
     };
 
     if (audioRef && audioRef.current) {
-      options.media = audioRef.current;
+      cleanedOptions.media = audioRef.current;
+    } else if (localCleanedAudioRef.current) {
+      cleanedOptions.media = localCleanedAudioRef.current;
     } else {
-      options.url = cleanedUrl;
+      cleanedOptions.url = cleanedUrl;
     }
 
-    cleanedWs.current = WaveSurfer.create(options);
+    cleanedWs.current = WaveSurfer.create(cleanedOptions);
 
     // Sync play/pause
-    cleanedWs.current.on('play', () => setIsPlaying(true));
-    cleanedWs.current.on('pause', () => setIsPlaying(false));
+    cleanedWs.current.on('play', () => {
+      setIsPlaying(true);
+      originalWs.current?.play();
+    });
+    cleanedWs.current.on('pause', () => {
+      setIsPlaying(false);
+      originalWs.current?.pause();
+    });
     
     // Sync seeking (When user clicks on the visible waveform)
     cleanedWs.current.on('seeking', (currentTime) => {
-      originalWs.current?.seekTo(currentTime / cleanedWs.current!.getDuration());
+      originalWs.current?.setTime(currentTime);
     });
 
     Promise.all([
@@ -73,15 +93,15 @@ export default function SmartCompareStudio({ originalUrl, cleanedUrl, audioRef }
       originalWs.current?.destroy();
       cleanedWs.current?.destroy();
     };
-  }, [originalUrl, cleanedUrl]);
+  }, [originalUrl, cleanedUrl, audioRef]);
 
   const togglePlayback = () => {
     if (isPlaying) {
-      originalWs.current?.pause();
       cleanedWs.current?.pause();
+      // originalWs is synced via events
     } else {
-      originalWs.current?.play();
       cleanedWs.current?.play();
+      // originalWs is synced via events
     }
   };
 
@@ -97,7 +117,14 @@ export default function SmartCompareStudio({ originalUrl, cleanedUrl, audioRef }
   };
 
   return (
-    <div className="bg-[#111] border border-[#27272a] rounded-2xl p-6 shadow-xl w-full">
+    <div className="bg-[#111] border border-[#27272a] rounded-2xl p-6 shadow-xl w-full relative">
+      {/* Hidden container and audio for original track */}
+      <div className="absolute opacity-0 pointer-events-none w-10 h-10 -z-10 overflow-hidden" aria-hidden="true">
+        <div ref={originalContainerRef}></div>
+        <audio ref={originalAudioRef} src={originalUrl} crossOrigin="anonymous" preload="auto" />
+        {!audioRef && <audio ref={localCleanedAudioRef} src={cleanedUrl} crossOrigin="anonymous" preload="auto" />}
+      </div>
+
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-xl font-bold text-white flex items-center gap-2">
           <Activity className="text-[#1877F2]" /> Smart Compare Studio
@@ -150,8 +177,8 @@ export default function SmartCompareStudio({ originalUrl, cleanedUrl, audioRef }
 
         <button className="text-gray-400 hover:text-white transition-colors" onClick={() => {
           const time = cleanedWs.current?.getCurrentTime() || 0;
-          cleanedWs.current?.setTime(Math.min(cleanedWs.current.getDuration(), time + 5));
-          originalWs.current?.setTime(Math.min(originalWs.current.getDuration(), time + 5));
+          cleanedWs.current?.setTime(Math.min(cleanedWs.current.getDuration() || 0, time + 5));
+          originalWs.current?.setTime(Math.min(originalWs.current.getDuration() || 0, time + 5));
         }}>
           <FastForward className="w-6 h-6" />
         </button>

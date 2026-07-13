@@ -64,14 +64,15 @@ def process_audio_file(
     task_id: str, 
     progress_callback: Callable[..., None],
     isolate_vocals: bool = False,
-
+    stem_count: int = 2,
+    de_reverb: bool = False,
     enhance_speech: bool = False,
     lyric_sync: bool = False,
     fast_mode: bool = True
 ) -> str:
     """
     1. Converts uploaded file to WAV format.
-    2. Isolates stems natively using Demucs (no API limits).
+    2. Isolates stems natively using Demucs or MDX (no API limits).
     3. Merges files and returns the zip path.
     """
     task_dir = WORK_DIR / task_id
@@ -106,26 +107,26 @@ def process_audio_file(
         
         # Step 2: Stem Separation
         if isolate_vocals:
-            progress_callback(30, "Analyzing audio and isolating core stems (takes a few minutes)...")
-            from core.state import state
-                
+            progress_callback(20, "Analyzing audio and isolating core stems (takes a few minutes)...")
             sep = create_separator(output_dir=final_dir, output_format="WAV")
             
-            # HIGH QUALITY MODE (MDX23C)
-            progress_callback(40, "Running high-quality separation...")
-            sep.load_model(model_filename='UVR-MDX-NET-Inst_HQ_3.onnx')
+            if stem_count == 4:
+                progress_callback(30, "Running 4-stem separation (Demucs)...")
+                sep.load_model(model_filename='htdemucs.yaml')
+            else:
+                progress_callback(30, "Running high-quality vocal separation...")
+                sep.load_model(model_filename='UVR-MDX-NET-Inst_HQ_3.onnx')
             
             if sep.model_instance is None:
                 raise RuntimeError(f"Failed to load separation model. The model may not have downloaded correctly.")
             
-            sim = ProgressSimulator(progress_callback, 40, 69, audio_duration * 1.5, "Running high-quality separation (this will take a while)...")
+            sim = ProgressSimulator(progress_callback, 30, 49, audio_duration * 1.5, "Running stem separation (this will take a while)...")
             sim.start()
             try:
                 out_files = sep.separate(str(downloaded_audio_path))
             finally:
                 sim.stop()
             
-            # audio-separator may return relative paths or just filenames.
             # Resolve them against the output directory to get the actual file path.
             for f in out_files:
                 f_path = Path(f)
@@ -140,8 +141,53 @@ def process_audio_file(
                     shutil.move(str(f_path), str(final_dir / "vocals.wav"))
                 elif "instrumental" in f_name or "inst" in f_name:
                     shutil.move(str(f_path), str(final_dir / "instrumental.wav"))
+                elif "drums" in f_name or "drum" in f_name:
+                    shutil.move(str(f_path), str(final_dir / "drums.wav"))
+                elif "bass" in f_name:
+                    shutil.move(str(f_path), str(final_dir / "bass.wav"))
+                elif "other" in f_name:
+                    shutil.move(str(f_path), str(final_dir / "other.wav"))
                         
-            # Free memory explicitly to prevent Hugging Face OOM crashes
+            del sep
+            import gc
+            gc.collect()
+
+        # Step 2.5: De-Reverb (Optional)
+        if de_reverb:
+            progress_callback(50, "Removing reverb from vocals...")
+            
+            target_for_dereverb = final_dir / "vocals.wav"
+            if not target_for_dereverb.exists():
+                target_for_dereverb = downloaded_audio_path
+            
+            sep = create_separator(output_dir=final_dir, output_format="WAV")
+            sep.load_model(model_filename='UVR-DeEcho-DeReverb.pth')
+            
+            if sep.model_instance is None:
+                raise RuntimeError(f"Failed to load de-reverb model.")
+            
+            sim = ProgressSimulator(progress_callback, 50, 69, audio_duration * 0.8, "Processing de-reverb...")
+            sim.start()
+            try:
+                out_files = sep.separate(str(target_for_dereverb))
+            finally:
+                sim.stop()
+                
+            for f in out_files:
+                f_path = Path(f)
+                if not f_path.is_absolute() or not f_path.exists():
+                    f_path = final_dir / f_path.name
+                if not f_path.exists():
+                    continue
+                f_name = f_path.name.lower()
+                
+                # audio-separator usually names outputs like "(No Reverb)" and "(Reverb)"
+                if "no reverb" in f_name:
+                    shutil.move(str(f_path), str(target_for_dereverb))
+                else:
+                    # Clean up the reverb-only file
+                    os.remove(str(f_path))
+
             del sep
             import gc
             gc.collect()

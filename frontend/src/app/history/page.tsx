@@ -17,7 +17,10 @@ function TaskStatusRow({ item, onDelete }: { item: any, onDelete: (id: string) =
   const getActiveTools = (opts: any) => {
     if (!opts) return [];
     const active = [];
-    if (opts.isolateVocals) active.push("Vocals");
+    if (opts.isolateVocals) {
+      if (opts.stemCount === 4) active.push("4 Stems");
+      else active.push("2 Stems");
+    }
 
     if (opts.enhance) active.push("Enhance");
     if (opts.deReverb) active.push("De-Reverb");
@@ -200,6 +203,7 @@ export default function HistoryPage() {
     }
 
     if (user?.primaryEmailAddress?.emailAddress) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchHistory(user.primaryEmailAddress.emailAddress);
     }
   }, [user, isLoaded, isSignedIn, fetchHistory]);
