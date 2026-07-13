@@ -31,8 +31,9 @@ export default function Navbar() {
           
           {/* Desktop Menu */}
           <div className="hidden md:flex items-center space-x-8">
-            <Link href="/" className="text-sm font-medium hover:text-white transition-colors">Home</Link>
-
+            <Link href="/" className="text-sm font-medium hover:text-white transition-colors">Splitter</Link>
+            <Link href="/pitcher" className="text-sm font-medium hover:text-white transition-colors">Pitcher</Link>
+            <Link href="/analyzer" className="text-sm font-medium hover:text-white transition-colors">Key & BPM</Link>
           </div>
           
           {/* Search Box */}
@@ -105,9 +106,9 @@ export default function Navbar() {
       {isOpen && (
         <div className="md:hidden bg-[#111] border-b border-white/10 absolute w-full">
           <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
-            <Link href="/" onClick={() => setIsOpen(false)} className="text-[#E4E6EB] hover:text-white block px-3 py-2 rounded-md text-base font-medium">Home</Link>
-
-            
+            <Link href="/" onClick={() => setIsOpen(false)} className="text-[#E4E6EB] hover:text-white block px-3 py-2 rounded-md text-base font-medium">Splitter</Link>
+            <Link href="/pitcher" onClick={() => setIsOpen(false)} className="text-[#E4E6EB] hover:text-white block px-3 py-2 rounded-md text-base font-medium">Pitcher</Link>
+            <Link href="/analyzer" onClick={() => setIsOpen(false)} className="text-[#E4E6EB] hover:text-white block px-3 py-2 rounded-md text-base font-medium">Key & BPM</Link>
             <div className="px-3 py-3">
               <form onSubmit={handleSearch} className="w-full relative">
                 <input 
