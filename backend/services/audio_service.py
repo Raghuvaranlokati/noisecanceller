@@ -158,7 +158,7 @@ def process_audio_file(
             
             target_for_dereverb = final_dir / "vocals.wav"
             if not target_for_dereverb.exists():
-                target_for_dereverb = downloaded_audio_path
+                shutil.copy(str(downloaded_audio_path), str(target_for_dereverb))
             
             sep = create_separator(output_dir=final_dir, output_format="WAV")
             sep.load_model(model_filename='UVR-DeEcho-DeReverb.pth')
@@ -199,7 +199,7 @@ def process_audio_file(
             
             target_for_enhance = final_dir / "vocals.wav"
             if not target_for_enhance.exists():
-                target_for_enhance = downloaded_audio_path
+                shutil.copy(str(downloaded_audio_path), str(target_for_enhance))
                 
             # Segment target_for_enhance WAV file into 5-minute chunks using FFmpeg's copy/segment
             chunk_pattern = str(final_dir / "chunk_%03d.wav")
